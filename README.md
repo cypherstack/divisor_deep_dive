@@ -1,2 +1,5 @@
 # divisor_deep_dive
-A repository re: research review results on Eagan's divisors.
+
+Results from reviewing Eagan's divisors and subsequent work.
+
+This repo manages the LaTeX code, and reference documents. The LaTeX code typesets the paper itself.
