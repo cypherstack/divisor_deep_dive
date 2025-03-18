@@ -1,0 +1,508 @@
+\documentclass{article}
+\usepackage{graphicx,amsmath,amsthm,amsfonts,amssymb,fullpage,xcolor,tikz,pgfplots,multirow,multicol,hyperref}
+\usepackage[operators,sets]{cryptocode}
+\usepackage{bbold} % for blackboard bold 1 vector
+% \usepackage{todonotes} % for notes
+\usepackage{bm} % for bold Greek letter
+
+\title{Veridise Logarithmic Derivative Review}
+\author{Rigo Salazar, Freeman Slaughter, Luke Szramowski, $\sf{Cypher \ Stack}$
+\thanks{\url{https://cypherstack.com}}}
+\date{\today}
+\usepackage[margin=1.25in]{geometry}
+
+\theoremstyle{definition}
+\newtheorem{proposition}{Proposition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+\newtheorem{problem}{Problem}
+% \newtheorem{lemma}{Lemma}[section]
+\newtheorem{lemma}{Lemma}
+\newtheorem{defn}{Definition} % [section]
+
+\def\do#1{\csdef{#1}{\mathbb{#1}}}
+\docsvlist{N,Z,Q,R,F,G,H}
+\def\do#1{\csdef{#1}{\mathcal{#1}}}
+\docsvlist{E,A,M,R,C,S,P,V,R,W,S,L,B,O}
+
+\pgfplotsset{compat=1.18}
+\setlength\parindent{0pt}
+
+\newcommand{\Fq}{\mathbb{F}_q}
+\newcommand{\Fqm}{\mathbb{F}_{q^m}}
+\newcommand{\Fqn}{\mathbb{F}_{q}^n}
+\newcommand{\Fqmn}{\mathbb{F}_{q^m}^n}
+\newcommand{\Fp}{\mathbb{F}_p}
+\newcommand{\Fpn}{\mathbb{F}_{p}^n}
+\newcommand{\6}{\mathbf}
+\newcommand{\7}{\mathcal}
+\newcommand{\rar}{\rightarrow}
+\newcommand{\lar}{\leftarrow}
+\newcommand{\lsamp}{\xleftarrow{\$}}
+\newcommand{\map}{\mapsto}
+\newcommand{\til}[1]{{\tilde{#1}}}
+\newcommand{\hsh}[1]{\text{Hash}{(#1)}}
+\renewcommand\epsilon\varepsilon
+\newcommand{\ip}[2]{{\langle {#1}, \, {#2} \rangle}}
+\newcommand{\dimFp}[1]{{\text{dim}_{\mathbb{F}_p}(#1)}}
+
+\newcommand{\com}[1]{{\mathsf{commit}(#1)}}
+\newcommand{\one}{\mathbb{1}}
+
+
+% \newcommand{\todo}[1]{\textcolor{red}{#1}}
+\newcommand{\free}[1]{{\textcolor{red}{#1}}}
+\newcommand{\luke}[1]{{\textcolor{green}{#1}}}
+\newcommand{\rigo}[1]{{\textcolor{blue}{#1}}}
+
+\newcommand{\divi}[1]{{\text{div}(#1)}}
+\newcommand{\lr}[1]{{\langle #1 \rangle}}
+
+\setlength\parindent{24pt}
+
+\begin{document}
+
+\maketitle
+
+This report contains a review of a logarithmic derivative technique report from Veridise. As with any such report, it may contain errors and cannot guarantee correctness or security. Further, it cannot guarantee that any particular implementation of the construction is correct, secure, or suitable for intended use cases. 
+
+The authors assert no warranty and disclaim liability for its use. The authors further express no endorsement of any kind. This report has not undergone any further formal or peer review
+
+\tableofcontents
+
+\section{Introduction}
+
+%Work in \cite{BassaLogDeriv} describes applications of logarithmic derivatives...
+
+%The main Eagen paper is here \cite{Eagen22}. It has a lot of great background on elliptic curves in the introduction!
+
+% This may be a helpful reference for breaking Bassa's other paper \cite{Celi23}.
+\hspace{\parindent} We find that the original paper \cite{BassaLogDeriv} lacks a formal backing for the results used and proven. The mathematics contained in the report are sound, but lack direct reference to the results or do not contain enough justification to be taken at face value.\par
+
+\medskip 
+
+Within the findings section, we have included a rework of each section of the paper, including citations of results which are invoked, proofs of results which were stated but for which proofs were unavailable, and inclusion of important background information.
+
+\medskip 
+
+It is also of importance that the notation used possess a higher degree of specificity, which will be highlighted in the notation section below.
+
+
+\section{Notation}
+Throughout this report, the following notation will be used, unless otherwise specified.
+\begin{itemize}
+    \item Let $F$ denote the function field over $K$, where $K$ is perfect and the full constant field of $F$.
+    \item We denote the characteristic of $F$ as prime $p$.
+    \item Let $F^{\times}$ denote the multiplicative group of $F$.
+    \item For a point $P = (a,b)$ on an elliptic curve, we denote $x(P) = a$ and $y(P) = b$.
+    \item For an elliptic curve $E$, we denote $\mathcal{O}_{\infty}$ as the point at infinity.
+    \item Let $K[x,y]$ denote the ring of polynomials, in $x$ and $y$, with coefficients in $K$ and $K(x,y)$ denote the ring of rational functions in $x$ and $y$.
+\end{itemize}
+
+% \section{Background}
+
+% \free{This is currently just stream of thought :)}
+
+% A divisor is a way to keep track of the roots and poles of a function. Sort of like how if I gave you roots $2$ and $-2$, you could recover $x^2-4$ (up to a constant factor) using only the roots.
+% A divisor is a sum of the form $n_1 P_1 + \dots + n_k P_k$ with integers $n_i$, and the sum of the $n_i$'s is the degree of the divisor. Divisors are a requirement to talk about poles, and Riemann-Roch characterizes the set of functions having specific poles (ie: that represent a specific divisor).
+
+
+% % Let $P=(a,b)$ be a point. 
+% Let $f$ be a function with a root $P$ of order $3$, a pole $Q$ of order $2$, and a pole $\O$ of order $1$ (at infinity). Note that the number of roots and poles must coincide. Using divisors, we can write $\divi{f} = \lr{f} = 3\lr{P} - 2\lr{Q} - \lr{\O}$.
+% Consider $f(x,y) = x-a$ where $P = (a,b)$ is a point on $y^2 = x^3 + Ax + B$. Then the divisor of this function is $\divi{f} = P + Q - 2\infty$. That is, $f$ has a simple root at $P = (a,b)$ and $Q = (a,-b)$, so also has a double-pole at infinity. Indeed, $f(P) = f(Q) = 0$, with no other roots.
+% As another example, the Tate pairing is defined as the function $\tau_r(x,y) = f_{\tau}(y)^{\frac{q^k-1}{r}}$ where $f_{\tau}$ is a rational function with divisor $r \lr{P} - r \lr{\infty}$, meaning it has $r$ roots at point $P$ and $r$ poles at infinity. This function is one of the few pairings used in pairing-based crypto (the other being Weil's) and can be efficiently computed using Miller's.
+
+
+% Let $f(x) = \prod_{i=1}^{k} (x - r_i)^{m_i}$, so it has roots $r_i$ with multiplicities $m_i$. Then $f'(x) = \prod_{i=1}^{k} (x - r_i)^{m_i-1} g(x)$ where $g$ may have roots besides the $x_i$'s. Then the l
+
+% Let $r$ be a root of $f$ with multiplicity $m$, so that $f(x) = (x - r)^m g(x)$ where $g(r) \neq 0$. Then $f'(x) = k (x-r)^{m-1} g(x) + (x - r) g'(x)$, so we get that 
+% $$\frac{f'(x)}{f(x)} = \frac{m}{z-r} + \frac{g'(x)}{g(x)}.$$
+% Since $g(r) \neq 0$, it's clear that $\frac{g'(x)}{g(x)}$ has no poles at $r$. So the pole of $\frac{f'(x)}{f(x)}$ at $r$ is $m$.
+% However, if we consider now $f(x) = (x - r)^{-m} g(x)$ where $m$ is now the multiplicity of the pole, we get that $$\frac{f'(x)}{f(x)} = \frac{-m}{z-r} + \frac{g'(x)}{g(x)},$$
+% or that the pole of the logarithmic derivative has multiplicity $-m$.
+% That is, for each root of $f$ with multiplicity $m$, the logarithmic derivative has a simple pole with multiplicity $m$, and for each pole of $f$ with multiplicity $m$, the logarithmic derivative has a simple pole with multiplicity $-m$. There will be no other poles or roots for the logarithmic derivative.
+% Thus all the poles are simple (see Cauchy's argument principle!!!)
+
+
+
+
+
+
+
+
+
+\section{Restructure}
+\subsection{Regarding Derivations}
+
+\medskip
+
+\begin{definition}
+    A \textit{derivation} of the quotient field $F/K$ into $F$ is a $K$-linear map $\delta : F \rightarrow F$ such that, for each $f,g \in F$, it holds that $\delta(f \cdot g) = f \cdot \delta(g) + \delta(f) \cdot g$.
+\end{definition}
+
+% \medskip
+
+\begin{definition} [\cite{Dummit04}, 551]
+    The field $K$ is said to be \textit{separable} (or \textit{separably algebraic}) over $F$ if every element of $K$ is the root of a separable polynomial over $F$. Equivalently, the minimal polynomial over $F$ of every element of $K$ is separable.
+\end{definition}
+
+% \medskip
+
+
+\begin{definition}
+    A \textit{separating element} of $F/K$ in $F$ is defined as any element for which $F/K(x)$ is a separable algebraic extension. 
+\end{definition}
+
+% \medskip
+
+\begin{definition}
+    Let $F$ be a field and $K$ be a finite extension of $F$. Let $\alpha \in K$ and define the linear transformation $\ell_{\alpha} : K \rightarrow K$ by $\ell_{\alpha}(x) \mapsto \alpha \cdot x$.
+    Then the \textit{field norm} of $\alpha$ with respect to $F/K$ is defined to be the determinant of $\ell_{\alpha}$.
+\end{definition}
+
+% \medskip
+
+We recall some properties regarding derivations and separating elements, which are from \cite{Stichtenoth93}:
+
+  
+\begin{proposition}[\cite{Stichtenoth93}, Proposition 4.1.4b]\label{prop:414b}
+    For each separating element $z$, there exists a unique derivation $\delta_z$ such that $\delta_z(z) = 1$.
+\end{proposition}
+
+% \medskip
+
+\begin{lemma}[\cite{Stichtenoth93}, Lemma 4.1.6a]\label{lemma:416a}
+    For each derivation $\eta$ and $x \in F$, we have that
+    $$\eta = \eta(x) \cdot \delta_x.$$ 
+\end{lemma}
+
+% \medskip
+
+\begin{lemma}[\cite{Stichtenoth93}, Lemma 4.1.6b]\label{lemma:416b}
+    Let $x$ and $y$ be separating elements. Then it holds that
+    $$\delta_y = \delta_y(x) \cdot \delta_x.$$
+\end{lemma}
+
+% \medskip
+
+\begin{lemma}[\cite{Stichtenoth93}, Lemma 4.1.6c]\label{lemma:416c}
+    Let $t \in F$. Then $\delta_x(t) \neq 0$ if and only if $t$ is a separating element.
+\end{lemma}
+
+% \medskip
+
+\begin{definition}
+    Given a function field $F/K$ and a derivation $\delta$, the \textit{logarithmic derivative} is the map $L : F^{\times} \rightarrow F$ defined as $L(f) = \frac{\delta(f)}{f}$.
+\end{definition}
+
+% \medskip
+
+In the classical case from calculus, this corresponds to $\frac{\mathrm{d}}{\mathrm{dx}} \ln(f(x))$ for a function $f(x)$. 
+This map defines a group homomorphism, which can be seen by the following:
+
+\medskip
+
+$$L(f \cdot g) = \frac{\delta(f \cdot g)}{f \cdot g} = \frac{f \cdot \delta(g) + \delta(f) \cdot g}{f \cdot g} = \frac{\delta(f)}{f} + \frac{\delta(g)}{g} = L(f) + L(g).$$
+
+
+
+
+\subsection{Characterization of the Kernel}
+
+We can use Lemma \ref{lemma:416c} to characterize the kernel of the logarithmic derivative. In specific,
+$$\ker(L) = \{t \in F^{\times} : L(t) = 0 \}.$$
+
+We can first notice that the kernel of $L$ is determined entirely by the kernel of the derivation, since:
+\begin{align*}
+    L(t) = 0 &\Leftrightarrow \frac{\delta(t)}{t} = 0 \\
+    &\Leftrightarrow \delta(t) = 0 \text{ and } t \neq 0.
+\end{align*}
+
+So, we can note that all non-trivial elements of the kernel of $L$ will be exactly the non-trivial elements of the kernel of $\delta$. 
+
+\medskip 
+
+\begin{remark}
+    In order to increase readability, it should be noted that when $\delta$ is invoked, it is simply $\delta_a$ for some separating element $a$. The particular element is not chosen specifically - nor does it need to be, by Lemma \ref{lemma:416b}, since each derivation is only going to differ by some non-zero scalar. 
+\end{remark}
+
+
+
+\begin{lemma} Let $a,b$ be separating elements in $F$. Then:
+$$\ker(\delta_a) = \ker(\delta_b).$$
+\end{lemma}
+
+\begin{proof}
+    We shall go about this by subset containment, then conclude by similarity of cases.
+    Let $k \in \ker(\delta_a)$. Since $a,b$ are separating elements, Lemma \ref{lemma:416b} implies that
+    $$\delta_a = \delta_a(b) \cdot \delta_b.$$
+    By Lemma \ref{lemma:416c}, we have that $\delta_a(b) \neq 0$. Taking the evaluation of $k$ on both sides yields:
+    % \begin{align*}
+    %     \delta_a(k) &= \delta_a(b) \cdot \delta_b(k) \\
+    %     &\Rightarrow 0 = \delta_a(b) \cdot \delta_b(k).
+    % \end{align*}
+    $$0 = \delta_a(k) = \delta_a(b) \cdot \delta_b(k).$$
+    Since $\delta_a(b) \neq 0$, it must be the case that $\delta_b(k) = 0$. So, $k \in \ker(\delta_b)$, as desired. It is clear that if we started with $l \in \ker(\delta_b)$ that the same argument would show  $l \in \ker(\delta_a)$, therefore we have our desired result.
+\end{proof}
+
+\medskip
+
+The first thing we can notice is that if $k \in K$, then it is not a separating element, and as such, $\delta(k) = 0$, by the equivalence prior stated in Lemma \ref{lemma:416c}. Thus, $K \subset \ker(\delta)$. In essence, elements of $K$ behave the way constant values do in single-variable calculus.
+
+\medskip 
+
+Due to the result from Lemma \ref{lemma:416c}, we can see that the kernel is exactly described as the set of all non-separating elements. An exact characterization of this is given in 
+(\cite{Stichtenoth93}, Proposition 3.10.2), which allows us to note that:
+$$\ker(L) = \{f \in F^{\times} : f \in K \text{ or } f = u^p \text{ with } u \in F^{\times}\}.$$
+This characterization lends itself nicely to our intuition regarding derivatives from calculus: the kernel clearly contains constant terms, whose derivatives should vanish and all terms that would result in a multiple of $p$ being produced would vanish as well. This characterization is important to the results below, so keep it in mind moving forward.
+
+\subsection{Notes on the Degree}
+\begin{definition}
+    For $t \in F \setminus K$, the \textit{degree} of $t$ in $F$, which we denote as $\deg_F(t)$, is defined as $\deg_F(t) = [F : K(t)]$.
+\end{definition}
+
+
+We can note that since the field has characteristic $p$, the degree of the polynomial is exactly what one would expect. However, since fields don't possess an inherent metric which gives a useful scale to field elements, the workaround is to define such a measure algebraically. 
+
+The following quantities are equal:
+
+\begin{enumerate}
+\item $\deg_F(t)$
+\item $\deg(t)_{\infty}$, which denotes the pole divisor of $t$ in $F$.
+\item $\deg(t)_0$, which denotes the zero divisor of $t$ in $F$.
+\end{enumerate}
+
+We can further note here that if the base field $F$ and the rational function field $K(x)$ coincide, then the usual definition of degree holds. That is, for $a(x),b(x) \in F$, which are relatively prime:
+$$\deg_{F} \left( \frac{a(x)}{b(x)} \right) = \deg_{K(x)} \left( \frac{a(x)}{b(x)}\right) = \max \left \{ \deg(a(x)), \deg(b(x))\right \},$$
+where the degree contained in the maximum is the standard polynomial degree.
+
+\medskip 
+
+It should be remarked that the degree operation behaves in a logarithmic fashion, in the sense that we can extract powers from it. 
+That is, for $t = u^x$, then it holds that $\deg_F(t) = \deg_F(u^x) = x \cdot \deg_F(u)$, where $u \in F$ and $x \in K$. %\free{where $u$ and $x$ come from?}.
+
+\medskip 
+
+With the prior background knowledge in mind, let us consider the following lemma:
+\begin{lemma} Let $f,g \in F$, where $\deg_F(f), \deg_F(g) < p$. Then $L(f) = L(g)$ if and only if $f = c \cdot g$ for some $c \in K$.
+\end{lemma}
+
+
+\begin{proof}
+    ($\Leftarrow$) We first establish the backward direction: let $f,g \in F$. Suppose that there exists some $c \in K$ such that $f = c \cdot g$. 
+    % Now, let us directly compute the logarithmic derivative of each:
+    Using the definition of a derivation, the calculation is as follows:
+    $$L(f) = \frac{\delta(f)}{f} = \frac{\delta(c \cdot g)}{c \cdot g} = \frac{c \cdot \delta(g) + \delta(c) \cdot g}{c \cdot g} = \frac{c \cdot \delta(g)}{c \cdot g} = L(g)$$
+    
+    % \begin{align*}
+    %     L(f) &= \frac{\delta(f)}{f} \\
+    %     &= \frac{\delta(c \cdot g)}{c \cdot g} \\
+    %     &= \frac{c \cdot \delta(g) + \delta(c) \cdot g}{c \cdot g} \\
+    %     &= \frac{c \cdot \delta(g)}{c \cdot g} \\
+    %     &= \frac{\delta(g)}{g} \\
+    %     &= L(g).
+    % \end{align*}
+    % $$L(f) = \frac{\delta(f)}{f}.$$
+    % $$L(g) = \frac{\delta(g)}{g} = \frac{\delta(c \cdot f)}{c \cdot f}.$$
+    % Recall that the derivation $\delta$ abides by the Leibnitz rule, so we can compute $\delta(c \cdot f)$ as follows:
+    % $$\delta(c \cdot f) = c \cdot \delta(f) + \delta(c) \cdot f.$$
+    % We can recall that the derivation of a constant is equal to zero, so the above summation collapses to:
+    % $$\delta(c \cdot f) = c \cdot \delta(f).$$
+    % By replacement and simplification, we see that
+    % $$L(g) = \frac{\delta(c \cdot f)}{c \cdot f} = \frac{c \cdot \delta(f)}{c \cdot f} = \frac{\delta(f)}{f} = L(f),$$
+    % as desired.
+
+
+
+
+
+    ($\Rightarrow$) Now we show the forward direction. We start by assuming that $L(f) = L(g)$, and $\deg_F(f), \deg_F(g) < p$.
+    Let us recall from prior assumption that the ambient field $K$ is perfect; that is, that every polynomial splits into linear factors. As such, we can define $f$ and $g$ as follows:
+    $$f(x) = a \prod_{i = 1}^{p - 1} (x - r_i) \quad \text{ and } \quad g(x) = b \prod_{i = 1}^{p - 1} (x - q_i),$$
+    where $a,b,r_i,q_i \in K$ for all $i$. Now, taking the logarithmic derivative, we find that
+    $$L(f(x)) = a \sum_{i = 1}^{p-1}\frac{1}{x - r_i} \quad \text{ and } \quad L(g(x)) = b \sum_{i = 1}^{p-1} \frac{1}{x - q_i}.$$
+    Given that $L(f) = L(g)$, it must be the case that the functions possess poles at the same locations with the same multiplicity. Specifically, that 
+    $$a \sum_{i = 1}^{p-1}\frac{1}{x - r_i} = b \sum_{i = 1}^{p-1} \frac{1}{x - q_i},$$
+    hence there  must exist some permutation $\pi$ such that $r_{\pi(i)} = q_i$.
+    Then it must be the case that the roots of $f$ are precisely the roots of $g$, where the functions themselves can differ only by a multiplicative constant, as claimed. 
+
+    
+    % Now, let us consider the forward direction. Let us assume that $L(f) = L(g)$, and $\deg_F(f), \deg_F(g) < p$. Let us recall from prior in the paper, that the ambient field $K$ is perfect, that is, every polynomial splits into linear factors. As such, we can define $f$ and $g$ as follows:
+    % $$f(x) = a \prod_{i = 1}^{p - 1} (x - r_i)$$
+    % $$g(x) = b \prod_{i = 1}^{p - 1} (x - q_i)$$
+    % where $a,b,r_i,q_i \in K$. Now, we can notice that, taking the logarithmic derivative of both will yield:
+    % $$L(f(x)) = a \sum_{i = 1}^{p-1}\frac{1}{x - r_i}$$
+    % $$L(g(x)) = b \sum_{i = 1}^{p-1} \frac{1}{x - q_i}$$
+    % Since $L(f) = L(g)$, it must be the case that the functions possess poles at the same locations, with the same multiplicity. As such, there must exist some permutation $\pi$ such that:
+    % $$r_{\pi(i)} = q_i$$
+    % Thus, it must be the case that the roots of $f$ are precisely the roots of $g$, and as such, the functions can differ by, at most, a multiplicative constant, as desired. 
+\end{proof}
+
+
+
+\begin{remark}
+    It should be noted that if $K$ is not a splitting field of $F$, the proof becomes far more difficult. The inclusion of the perfectness of $K$ is necessary to draw this result.
+\end{remark}
+
+% \medskip
+
+\subsection{Precursory Substitutions}
+
+Let us define $\mathbb{F}_q(E)$ to be the function field of the elliptic curve $E$, given by the equation:
+$$y^2 = x^3 + Ax + B,$$
+where $A,B \in \mathbb{F}_q$. Let $D(x,y) \in \mathbb{F}_q(E)$. We can recall that $D(x,y)$ will be a polynomial in indeterminate $x$ and $y$, and we shall only consider the evaluation of $D(x,y)$ on points which fall on the curve. Let us further assume it only possesses poles at the point at infinity. We can explicitly express $D(x,y)$ in the following form, for some natural numbers $n,m$: 
+$$D(x,y) = \sum_{i = 0}^n \sum_{j = 0}^m a_{i,j} x^i y^j.$$
+
+We can notice that everywhere $y^2$ (or some power of $y^2$) appears in the summation, it can be replaced by the equation of the curve. Furthermore, every odd power of $y$ can also undergo this replacement after separating the even component of the power (for example, $y^3=y^2\cdot y$). Using this method, we can re-express this as $D(x,y) = a(x) - y \cdot b(x)$
+for some polynomials $a(x),b(x) \in \mathbb{F}_q(x)$.
+
+Now, let us consider the substitution $z = y - \lambda \cdot x$ for some $\lambda \in \mathbb{F}_q$. Substituting this into the original curve, we obtain
+$$0 = y^2 - x^3 - A \cdot x - B = (z + \lambda \cdot x)^2 - x^3 - A \cdot x - B.$$
+Expanding and collecting like terms, we find that
+$$x^3 - (\lambda \cdot x)^2 + (2 \lambda z + A) \cdot x + (B - z^2) = 0.$$
+We can notice that in order to obtain $\mathbb{F}_q(E)$ from $\mathbb{F}_q(z)$, we need to simply adjoin a root of the above polynomial. As it is a third degree polynomial, we can denote the roots of the polynomial as $x_0,x_1$ and $x_2$. Let $y_i = z - \lambda \cdot x_i$. We shall use the above substitution in the derivation given in the next subsection.
+
+\subsection{Formal Deduction of the Desired Formula}
+
+\medskip
+
+\begin{remark}For all the following derivations, we shall include comments on an operation-by-operation basis to reduce confusion, as well as simplify notation where needed.
+\end{remark}
+
+We wish to find an expression for the logarithmic derivative of the norm of $D(x,y)$. To do this, consider the following steps:
+
+\begin{enumerate}
+\item Let us begin by symbolically noting that the quantity we wish to derive an expression for is given by
+$$L(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))) = \frac{\delta_z(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y)))}{N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))}.$$
+
+\item By the result given in [\cite{Dummit04}, Exercise 17], we have that
+$$N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y)) = \prod_{i = 0}^2 D(x_i,y_i).$$
+
+\item We can notice that taking the logarithmic derivative will require us to find the derivation of this product. Since the Leibnitz rule holds, we can see that
+$$\delta_z\left( \prod_{i = 0}^2 D(x_i,y_i) \right) = \sum_{j = 0}^2 \frac{\prod_{i = 0}^2 D(x_i,y_i)}{D(x_j,y_j)} \delta_z(D(x_j,y_j)).$$
+
+\item \label{item:dzD} So, let us determine an expression for $\delta_z(D(x_j,y_j))$. Starting from $D(x_j,y_j) = a(x_j) - y_j \cdot b(x_j)$, we have that:
+% $$\delta_z(a(x_j) - y_j \cdot b_j(x_j)) = \delta_z(a(x_j)) - \delta_z(y_j \cdot b_j(x_j)).$$
+% Taking the derivation, with care to respect the chain and product rule, we have:
+$$\delta_z(D(x_j,y_j)) = \delta(x_j) \cdot a'(x_j) - \delta_z(y_j) \cdot b(x_j) - y_j \cdot b'(x_j) \delta_z(x_j),$$
+where $a'(x_j)$ and $b'(x_j)$ are the usual derivatives on polynomials.
+
+\item Now, let us recall that $y_j^2 = x_j^3 + A \cdot x_j + B$. Taking $\delta_{x_j}$ of both sides and collecting terms yields
+% $$\delta_{x_j}(y_j^2) = \delta_{x_j}(x_j^3 + A \cdot x_j + B) \Rightarrow 2 \cdot y_j \cdot \delta_{x_j}(y_j) = 3 \cdot x_j^2 + A$$
+$$\delta_{x_j}(y_j) = \frac{3 \cdot x_j^2 + A}{2 \cdot y_j}.$$
+
+\item \label{item:dxj} We re-parameterize the derivation with respect to $z$, since $\delta_v = \delta_v(w) \cdot \delta_w$ (using Lemma \ref{lemma:416b}), which leaves us with
+$$\delta_z(y_j) = \frac{3x_j^2 + A}{2 \cdot y_j} \delta_z(x_j).$$
+
+\item As $z = y_j - \lambda \cdot x_j$, taking the derivation results in $\delta_z(z) = \delta_z(y_j) - \lambda \cdot \delta_z(x_j)$, which paired with the above and \ref{prop:414b} gives
+$$\left( \frac{3x_j^2+A}{2 \cdot y_j} - \lambda \right) \cdot \delta_z(x_j)=1.$$
+
+\item \label{item:dzxj} With the above expression, we can solve for $\delta_z(x_j)$:
+$$\delta_z(x_j) = \frac{2 \cdot y_j}{3x_j^2 + A - \lambda \cdot 2 y_j}.$$
+
+\item We now have all the pieces needed to simplify the expression for the logarithmic derivative of the norm of $D(x,y)$. By definition, we have that
+$$L(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))) =  \sum_{j = 0}^2 \frac{\delta_z(D(x_j,y_j))}{D(x_j,y_j)}.$$
+
+
+Applying Item \ref{item:dzD} above, we have that
+$$L(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))) =  \sum_{j = 0}^2 \frac{\delta(x_j) \cdot a'(x_j) - \delta_z(y_j) \cdot b(x_j) - y_j \cdot b'(x_j) \delta_z(x_j)}{D(x_j,y_j)}.$$
+
+Using Item \ref{item:dxj} above, we can substitute $\delta_z(y_j)$ to obtain
+$$L(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))) =  \sum_{j = 0}^2 \frac{\delta(x_j) \cdot a'(x_j) - \left( \frac{3x_j^2 + A}{2 \cdot y_j} \delta_z(x_j)\right) \cdot b(x_j) - y_j \cdot b'(x_j) \delta_z(x_j)}{D(x_j,y_j)}.$$
+
+Notice that the numerator possesses $\delta_z(x_j)$ in each of its terms, thus it may be factored out as follows
+$$L(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))) =  \sum_{j = 0}^2 \frac{a'(x_j) - \left( \frac{3x_j^2 + A}{2 \cdot y_j}\right) \cdot b(x_j) - y_j \cdot b'(x_j)}{D(x_j,y_j)} \delta_z(x_j).$$
+
+Finally, we can then replace the factored term by the expression solved for in Item \ref{item:dzxj} to find that
+$$L(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))) =  \sum_{j = 0}^2 \frac{a'(x_j) - \left( \frac{3x_j^2 + A}{2 \cdot y_j}\right) \cdot b(x_j) - y_j \cdot b'(x_j)}{D(x_j,y_j)} \cdot \frac{2 \cdot y_j}{3x_j^2 + A - 2 \lambda \cdot y_j}.$$
+\end{enumerate}
+
+This gives us the desired final form of the derivation. We note that in this form it is straightforward to evaluate the logarithmic derivative of the norm at some point, as the summation is taken over only three points.
+
+
+
+
+
+\subsection{A Potential Vulnerability}
+\hspace{\parindent}The first notion that we must approach with care is the multiplicities of the roots of the selected polynomials. 
+As is seen in the above derivation, we have that:
+$$\delta_z(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))) = \sum_{i = 1}^k \frac{n_i}{z-z(P_i)},$$
+where the $n_i$ are the multiplicities of the roots found in $D(x,y)$. 
+The immediate danger is that, as this calculation is performed over a finite field of characteristic $p$, terms could potentially vanish upon modular reduction. 
+For all practical purposes, it can be argued that this issue occurs with only negligible probability, due to the extremely large value of $p$ and the comparatively small degree of the polynomial. As such, selecting a large enough value of $p$ (say, on the order of $2^{252}$ for example) is sufficient to assuage us of this vulnerability. 
+
+\medskip 
+
+A more glaring issue that occurs is that an adversary with knowledge of a single valid proof can forge an arbitrary amount of proofs. Moreover, they may do so in a straightforward fashion.
+We can recall that the motivation behind this derivation is to give a proof of the following:
+$$\sum_{i = 1}^k n_i \cdot P_i = \mathcal{O}_{\infty},$$
+where $\mathcal{O}_{\infty}$ denotes the point at infinity. 
+Since this addition is computed over a field with characteristic $p$, then for any sequence $\{d_i\}_{i = 1}^k$ with $d_i \in \mathbb{Z}$ for all $i$, we have that
+$$\sum_{i = 1}^k (n_i + d_i \cdot p) \cdot P_i \equiv \sum_{i = 1}^k n_i \cdot P_i.$$
+This implies that an adversary can take a valid proof and add on points times integer multiples of $p$, and this will appear to also have the same valid proof.
+
+\medskip 
+
+The obvious, naive fix to this issue would be to add on a check to guarantee that the committed coefficients are in reduced form modulo $p$. 
+This would effectively necessitate a range proof, which can be done efficiently with Bulletproofs \cite{bullet} for instance, but it is actually not enough to prevent forgeries.
+
+\medskip 
+
+Suppose that an adversary obtains a valid proof that $\sum_{i = 1}^k n_i \cdot P_i = \mathcal{O}_{\infty}$, where the $n_i$ coefficients have passed a range proof certifying that $0 \leq n_i < p$ for each $i$. 
+As $\mathcal{O}_{\infty}$ behaves like an identity, $\mathcal{O}_{\infty} = -\mathcal{O}_{\infty}$. 
+This adversary can take $p \cdot P_1 + \dots + p \cdot P_k = 0$, then subtract the valid representation,
+which results in 
+$$\sum_{i = 1}^k (p - n_i) \cdot P_i = -\mathcal{O}_{\infty} = \mathcal{O}_{\infty},$$
+thus also represents a valid proof. 
+The important feature to note here is that if the $n_i$ coefficients pass a range proof certifying that $0 \leq n_i < p$ for all $i$, then for each non-zero $n_i$ we also have that $0 \leq p - n_i < p$, which similarly passes the same range proof. 
+
+\medskip 
+
+This highlights that a naive implementation of the range proof to check that the coefficients $n_i$ are in $[0, p)$ is insufficient. 
+Indeed, a range proof with an upper bound of $\floor{p/2}$ would be more appropriate to prevent this vulnerability. 
+For security purposes, it may be necessary to require the upper bound of the range proof be even smaller to widen the gap between $n_i$ and $p - n_i$, say $\floor{p/10}$, or perhaps simply set an immutable, predetermined upper bound on a protocol basis that nearly all real-world instances fall under, something like $2^{33} \approx 10^{10}$.
+Overall, we do not see an immediate way around range proofs, it appears that they are required to prevent adversarial forgeries. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\bibliographystyle{alpha}
+\bibliography{archive.bib}
+
+\end{document}
