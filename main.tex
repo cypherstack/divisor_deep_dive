@@ -1,0 +1,427 @@
+\documentclass{article}
+\usepackage{graphicx,amsmath,amsthm,amsfonts,amssymb,fullpage,xcolor,tikz,pgfplots,multirow,multicol,hyperref}
+\usepackage[operators,sets]{cryptocode}
+\usepackage{bbold} % for blackboard bold 1 vector
+% \usepackage{todonotes} % for notes
+\usepackage{bm} % for bold Greek letter
+\usepackage{ dsfont } % for weird bb A character
+\usepackage{authblk} % for affiliations
+
+\title{A Review of the Veridise Discrete Logarithm Relation Gadget}
+
+% Interactive Protocol for the Discrete Logarithm Relation}
+\author{Brandon Goodell, Rigo Salazar, Freeman Slaughter, Luke Szramowski
+}
+\affil{$\mathsf{Cypher \ Stack}$}
+
+\date{17 March 2025}
+
+
+\theoremstyle{definition}
+\newtheorem{proposition}{Proposition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+\newtheorem{problem}{Problem}
+\newtheorem{lemm}{Lemma}[section]
+\newtheorem{defn}{Definition} % [section]
+
+\def\do#1{\csdef{#1}{\mathbb{#1}}}
+\docsvlist{N,Z,Q,R,F,G,H}
+\def\do#1{\csdef{#1}{\mathcal{#1}}}
+\docsvlist{E,A,M,R,C,S,P,V,R,W,S,L,B,O}
+
+\pgfplotsset{compat=1.18}
+\setlength\parindent{0pt}
+
+\newcommand{\Fq}{\mathbb{F}_q}
+\newcommand{\Fqm}{\mathbb{F}_{q^m}}
+\newcommand{\Fqn}{\mathbb{F}_{q}^n}
+\newcommand{\Fqmn}{\mathbb{F}_{q^m}^n}
+\newcommand{\Fp}{\mathbb{F}_p}
+\newcommand{\Fpn}{\mathbb{F}_{p}^n}
+\newcommand{\6}{\mathbf}
+\newcommand{\7}{\mathcal}
+\newcommand{\rar}{\rightarrow}
+\newcommand{\lar}{\leftarrow}
+\newcommand{\lsamp}{\xleftarrow{\$}}
+\newcommand{\map}{\mapsto}
+\newcommand{\til}[1]{{\tilde{#1}}}
+\newcommand{\hsh}[1]{\text{Hash}{(#1)}}
+\renewcommand\epsilon\varepsilon
+\newcommand{\ip}[2]{{\langle {#1}, \, {#2} \rangle}}
+\newcommand{\dimFp}[1]{{\text{dim}_{\mathbb{F}_p}(#1)}}
+
+\newcommand{\com}[1]{{\mathsf{commit}(#1)}}
+\newcommand{\one}{\mathbb{1}}
+
+
+% \newcommand{\todo}[1]{\textcolor{red}{#1}}
+\newcommand{\free}[1]{{\textcolor{red}{#1}}}
+\newcommand{\luke}[1]{{\textcolor{purple}{#1}}}
+\newcommand{\rigo}[1]{{\textcolor{blue}{#1}}}
+\newcommand{\brando}[1]{{\textcolor{green}{#1}}}
+
+\newcommand{\divi}[1]{{\text{div}(#1)}}
+\newcommand{\lr}[1]{{\langle #1 \rangle}}
+
+\begin{document}
+
+\maketitle
+
+
+
+
+
+As with any such report, this document may contain errors, and we cannot guarantee its correctness or security. 
+Further, no particular implementation of the construction is in the scope of this review, and we make no guarantees about the correctness, security, or suitability for intended use cases.
+The authors further express no endorsement of any kind. 
+This report has not undergone any further formal or peer review.
+
+
+\tableofcontents
+
+\subsection*{Change Log}
+
+This document may be updated occasionally, especially if security-sensitive results come to light. We summarize such changes here.
+\begin{itemize}
+\item 17 March 2025. Initial upload to GitHub.
+\item 15 April 2025. Remove redundant descriptions of mathematics presented in \cite{BassaSoundnessIPDL}, rewrite to clarify conclusions.
+\item 23 May 2025. Add change log and minor modifications to wording.
+\end{itemize}
+
+% \subsection{ONGOING NOTES FOR THE BOYS}
+
+% \begin{enumerate}
+%     % \item 1 April: moved notes in changelog to standalone items. Still waiting on Brandon's thoughts, still waiting on Luke and Rigo to add their thoughts.... $>:($
+
+%     % \item Put $\6s$ into Pedersen commits? Not clear why it needs to be length $k$. The fact we even have to ask Kayaba makes me ANGWY! 
+
+%     % \item Why was it necessary to have the binary decomposition? Kayaba stated in person was this was an optimization for the hamming weight so a note should be made about that in the paper. Future people who may try to implement this may choose p-ary representations and then have massive implementation issues  (major issue)
+
+%     % \item While Kayaba states that the lack of completeness won't be an issue when the gadget is wrapped up in a bulletproof, most bulletproof implementations seem to have completeness as a given. Therefore, it needs to be justified why a lack of completeness in this gadget will still work within the confines of the BP. (major issue)
+
+%     % \item Brandon says: "in neither of the papers is the runtime assessed or success probability". Also, their soundness and related terms are not defined 
+
+%     % \item Remove judgey language: if you see an adjective which is judge judy, just remove it. We don't have to be vicious attack dogs, we don't have to be super diplomatic, just honest.
+
+
+%     % \item Make it so that part of the time, they have to actually fully compute the point mults
+
+%     % \item Brandon is making a major issue out of the witness extended emulation junk <-- lol
+
+
+%     % \item
+    
+% \end{enumerate}
+
+
+
+\section{Introduction}
+
+We review ``Soundness Proof for an Interactive Protocol for the Discrete Logarithm Relation'' (\cite{BassaSoundnessIPDL}) by Alp Bassa at Veridise, which intends to formalize the protocol informally described in \cite{Eagen22} and establish its soundness. This can also be viewed as a formalization and improvement upon the gadget presented in \cite{KayabaR1CS}.
+The intended application is full-chain membership proofs (FCMP++, \cite{KayabaFCMP}) for privacy-respecting cryptocurrency protocols.
+\smallskip 
+
+The scope of our review is restricted to \cite{BassaSoundnessIPDL}, but information from \cite{Eagen22}, \cite{BassaLogDerivSoP}, and \cite{BassaSoundnessProofSoP} are necessarily discussed, along with insights obtained from personal communications with Luke ``Kayaba" Parker regarding the intended use-case in Monero.
+
+
+
+\section{Executive Summary}
+
+
+% The results and their proofs in \cite{BassaSoundnessIPDL} are plausible, but the paper has both minor and major issues - which admittedly may not have been within scope. Some of these issues represent nontrivial problems with the validity of the approach in \cite{Eagen22}, and these should be addressed further prior to deployment in production.
+We find that the results and proofs in \cite{BassaSoundnessIPDL} are plausible. However, the paper contains both minor and major issues, some of which may fall outside of its original scope. Notably, several of these issues pose nontrivial challenges to the validity of the approach presented in \cite{Eagen22}, and these concerns should be carefully addressed before considering on-chain deployment.
+\smallskip
+
+Please note that our judgment on the parts of \cite{BassaSoundnessIPDL} which may require refinement are likely to differ from the opinions of other authors. 
+We emphasize that we have no knowledge of the scope imposed on \cite{BassaSoundnessIPDL}.
+While we believe our list to be fair,  we do not believe it to be exhaustive.  
+% We suspect that a thorough inspection of \cite{BassaSoundnessIPDL} may reveal unaddressed roadblocks, and possibly flaws.
+It is additionally our belief that a thorough revision of the report addressing the issues highlighted in this document could uncover potential flaws yet undiscovered in the protocol.
+
+
+\section{Major and Minor Issues}
+
+\subsection{Major Issues}\label{sec:maj}
+
+\begin{enumerate}
+    \item Clear definitions at the beginning of a manuscript clarify writing. Defining all terms at the start of a paper helps readers understand the arguments, avoid confusion, follow the reasoning without searching for definitions elsewhere, as well as mitigates ambiguity between references with different notation.  This is true even for standard definitions. \cite{BassaSoundnessIPDL} provides references in the literature instead, leaving it to the reader to cross-reference the proofs within against the definitions contained in other references.
+    % \brando{Is this a major issue for most mathematicians, or is this a major issue for pedants like myself?}
+
+    \item Explanations for the objectives of the manuscript are warranted. The intended use-case of the protocol investigated in \cite{BassaSoundnessIPDL} is not described, and reasonable presumptions by readers are significant sources of confusion. We elaborate on this below in Section \ref{sec:explainbetter}.
+    
+
+    \item Explanations of the benefits to using the described protocol instead of other methods are necessary. We elaborate on this below in Section \ref{sec:benefits}.
+
+    \item Since witnesses are revealed directly, the protocol appears to be trivially complete and trivially sound. Explanations of the security definitions being investigated are required.
+    \begin{itemize}
+    \item It is not clear to us how the incompleteness of the protocol purported in \cite{BassaSoundnessIPDL} and \cite{Eagen22} can be reconciled with the ostensible trivial completeness obtained from the revealed witness. 
+
+    \item We are not convinced that the notion of soundness demonstrated in this document is necessary or sufficient for intended use-cases, as the elaborate extractor which requires $13kq$ transcripts seems to be easily replaced with an extractor which reads the witness directly from the transcript. 
+    \end{itemize} 
+     We elaborate on this and more below in Section \ref{sec:sec_def}.
+
+
+    
+    \item \cite{BassaSoundnessIPDL} provides no description for the zero-knowledge context within which this protocol is intended to be deployed. We are skeptical that context can be ignored. We discuss this in Section \ref{sec:zk_context}. 
+
+
+    \item Without a formal proof, it is possible that the extractor in \cite{BassaSoundnessIPDL} runs in non-polynomial time or succeeds only with negligible probability. We discuss this in Section \ref{sec:runtime}. 
+
+    \item Simplifications should be avoided if possible, even though they are expedient. 
+    We suspect that the proofs in \cite{BassaSoundnessIPDL} can be improved across the board by avoiding these abridgments. For example, instead of relaxing the Hasse bound to $n = O(q)$, the inequality $(\sqrt{q} - 1)^2 \leq n \leq (\sqrt{q} + 1)^2$ can be used instead, revealing important computational factors. 
+    
+    \item Asymptotic results are not concrete results. We discuss this further in Section \ref{sec:asymptotics}. 
+    
+    \item  The security of this protocol is not truly based on the discrete logarithm problem: given $G$ and $P$, recover $a$ such that $P = a \cdot G$. Rather, it is a \textit{generalized} discrete logarithm problem (some authors call this the \textit{vector form} of the discrete logarithm problem, others reserve ``generalized" for a different problem altogether): given $G, B_1, \dots, B_k$ and $P$, recover $a, s_1 \dots, s_k$ such that $P = a \cdot G + s_1 \cdot B_1 + \dots + s_k \cdot B_k$. Over $\Fp$, we do not expect that the generalized discrete logarithm problem can be solved faster than the standard version, but an analysis should be presented assuring the reader that even the state of the art naive algorithms have an intractable runtime. %Although, it appears that there may be lattice algorithms with results in this direction \cite{Ducas18}. 
+    % Unsurprisingly, it looks like subset-sum solvers may also be applied here in order to naively recover $a, s_1 \dots, s_k$.
+
+\end{enumerate}
+
+
+
+
+
+
+\subsection{Minor Issues}\label{sec:min}
+
+\begin{enumerate}
+
+    % \item The paper \cite{BassaSoundnessIPDL} attempts to prove some flavor of $n$-of-$m$-special-soundness of an interactive protocol suggested in \cite{Eagen22}. \cite{BassaSoundnessIPDL} does not establish any of the basic definitions at hand related to general proving systems, like their completeness, knowledge soundness, $n$-of-$m$-special soundness, witness-extended emulation, and zero-knowledge-ness.
+    % While these are standard definitions, this forces readers to refer to references throughout
+    
+    \item In the main protocol, the verifier's first action is to sample $A_0, A_1 \lsamp E$, where $\lsamp$ indicates samples taken uniformly at random. Later, in Corollary 6, the knowledge error is calculated as
+    $$\kappa \leq \frac{13kq-1}{(\#E(\Fq))^2}$$
+    ie: that the protocol is $13kq$-out-of-$(\#E(\Fq))^2$-special-sound. The Hasse bound provides the bounds $q  - 2\sqrt{q} + 1 \leq \#E(\Fq) \leq q + 2\sqrt{q} + 1$, so we have \[\frac{13kq-1}{(q+2\sqrt{q}+1)^2} \leq \frac{13kq-1}{(\#E(\Fq))^2} \leq \frac{13kq-1}{(q-2\sqrt{q}+1)^2}.\] In fact, we can only guarantee a knowledge error $\kappa = O(\frac{13kq-1}{(q-2\sqrt{q}+1)^2})$. Of course, this is $O(q^{-1})$ as claimed by Bassa. However, the tightness of this bound and the value of $(k,q)$ are both critical to practical, concrete security, yet not investigated. 
+    However, due to the abort constraints, the sample set cardinality is strictly smaller than $(\#E(\Fq))^2$. Indeed, even only demanding that the points be distinct will shrink the set slightly. This compounds the concrete worsening of $\kappa$. Assessing practical impact requires more precise analysis.
+    \smallskip 
+    
+    We agree informally that the challenge set size is large and very close to $(\#E(\Fq))^2$. We agree informally that the stated knowledge errors for the extractor built in \cite{BassaSoundnessIPDL} are reasonable approximations of the true values. We agree informally that the conditions causing an abort are sufficiently rare as to not present a practical problem. However, these details ought to be filled in and formalized. The total abort probability should be formally and precisely computed (and this is necessary to precisely compute the acceptance error).
+    
+    % In private communications with Kayaba, we were assured that this is not a major issue, but nonetheless a comprehensive analysis should be put forth to justify that this restriction is not damaging.
+
+
+    \item In Sec. 2.3, the exponent is represented in ``base-2" notation, which takes the form 
+    $$a = \sum_{i=0}^k s_i \cdot 2^i$$
+    for $s_i \in \Z$. Even with the assumption that $0 \leq s_i < p$, this is not actually the base-2 representation. This type of representation is \textit{highly} malleable, giving a great many distinct but equivalent representations, even if restricted to $\Fp$. For instance over $\Z$, or $\Fp$ for $p$ large enough, we can represent $4$ as $1 \cdot 2^2$, or $2 \cdot 2^1$, or $4 \cdot 2^0$, resulting in vector representations of $(100)$, $(020)$, and $(004)$ respectively. The point of these $s_i$'s, which is unfortunately never stated, is that these values will be selected in order to optimize certain constraints in the R1CS presented in \cite{KayabaR1CS}. Any future readers who attempt to naively implement the results of \cite{Eagen22} would be at a disadvantage - because the purpose of permitting such a wide spread of allowed $s_i$ values is not clear, they may select parameters that are far from optimization, thus negating some of the computational benefit of the protocol.
+
+
+    \item Restrictive hypotheses placed on provers and verifiers may help clarify our problems with using $n$-of-$m$-special-soundness. Consider the binary decomposition of the discrete logarithm $\6s$, and the point $P$, which are both learned by verifiers in the protocol for $\mathcal{R}_{DL}$. 
+    \begin{itemize}
+    \item An extractor for this protocol as-is can use $\6s$ from the transcript to compute $a = \sum_{i=0}^k s_i \cdot 2^i$, and then can use $a$ to compute $Q = a \cdot G$, and check if $Q = P$, yielding trivial soundness.
+    \item In the Generic Group Model, the prover has access to an oracle through which all group operations must be computed: $\mathcal{O}(G_1, G_2) = G_1 + G_2$. The transcript of the prover in the GGM reveals a (sequence of) oracle queries $(G_{i,1}, G_{i,2})$ terminating in the output of $P$, and this sequence of queries corresponds to an observation of a computation of an arithmetic circuit. From several such transcripts of queries, an $n$-of-$m$-special-soundness extractor may determine the discrete logarithm of $P$ with respect to $G$, say that $P = b \cdot G$. Then, it may check if $a = b$ instead. 
+    \end{itemize}
+    We suspect that the difference between these methods may explain some of the gap between what seems to be trivial soundness and nontrivial $n$-of-$m$-special-soundness. 
+
+    \item In \cite{BassaSoundnessIPDL}, terminology is rather abused, and the document is not self-contained. This is unsurprising, as it is one of several white papers referencing another white paper by a distinct author. However, new terminology is introduced without explanation, like ``effective divisor'' and ``zero divisor,'' leaving their intention implicit. We suspect, but are not certain of, the following collisions:
+    \begin{itemize}
+    \item Bassa's zero divisors seem to be Eagen's divisors of degree zero. 
+    \item Bassa's effective divisors seem to be Eagen's divisors with non-zero degree. 
+    \end{itemize}
+    However, a divisor is usually defined as \textit{effective} when all coefficients in the sum are positive, whereas the context used requires a \textit{principal divisor}, which is a \textit{difference between effective divisors of equal degree} as in \cite{silverman2009arithmetic}. Bassa's analysis, without a thorough discussion on terminology and notation, is ambiguous.  Clarification would be valuable.
+
+    \item In Sec. 4, a minor modification is proposed, and it is stated that the difference is merely aesthetic. This modification is never elaborated upon, but it may actually complicate the protocol unnecessarily. The current protocol specifically checks that $D(A_i)$ is non-zero, then computes $h_i = \frac{D'(A_i)}{D(A_i)}$, which necessarily involves computing $D(A_i)^{-1}$. It seems more concise to simply compute the inverse using the Extended Euclidean Algorithm, which will then productively fail when $D(A_i)=0$. We suggest that this be investigated a bit further before production development.
+
+    \item Other modifications of the protocol such as the one discussed in the previous point may yield moderately better efficiency. For example, it is not clear whether gains can be made by sampling two challenge points $A_0$, $A_1$ and interpolate a line, or to sample one challenge point $A_0$ and a slope $\lambda$. Such choices impact the choice of verification equations, which may in turn have impacts on overall protocol efficiency.
+
+    % \item \luke{I think that section 3.3 on completeness is complete. The arguments for the completeness error seem fine and addresses the abort conditions. Since the lack of completeness comes from instances where the logarithmic derivative will be undefined and issues with the line chosen, I feel confident that all necessary points are excluded.}
+
+    \item In Sec. 3.3, the first four conditions (i-iv) are sensible, and represented by abort conditions in the protocol in a one-to-one manner. However, condition (v) has the following issues:
+    \begin{itemize}
+    \item This condition does not appear to be explicitly addressed in the abort conditions stated in the protocol.
+    \item This condition is the only one without an analysis that computes the number of excluded cases, so it is not obvious that the number of cases covered here is negligible. 
+    % \item \brando{It is mentioned that Eagen requires the lowest order coefficient to be nonzero and normalizes it to be $1$, whereas the gadget in \cite{KayabaR1CS} requires the coefficient of $x$ to be non-zero and normalizes it to be $1$. I don't understand why we can't check that at least one coefficient is not $0 mod p$? Or just scale the leading coefficient to be $1$? Isn't that sufficient?  And doesn't the Eagen protocol require that the leading coefficient be $1$ anyway??? And if not, we can say a polynomial is \textit{monic} if it's term with highest degree has coefficient $1$. The only constant monic polynomial is $1$, ($0$ is not monic) which is non-zero. Why not demand that D(x,y) be (i) monic and (ii) non-constant? Maybe this zero check is confusing to me...} \free{me fuckin too dog...}
+    \item In the same vein, Sec. 3.2 claims that ``the proportion of not representable divisors will be negligible," but does not prove this.
+    \end{itemize}
+
+\end{enumerate}
+
+
+
+
+
+
+
+\subsection{Typos}\label{sec:typo}
+
+\begin{enumerate}
+    \item Sec 3.1 has an extra $q$ term in the Hasse bound. Correctly stated, the bound is $|n-(q+1)| \leq 2\sqrt{q}$.
+
+    \item Sec. 2.3 incorrectly states ``the witness is only known to the verifier." As the vector $s$ is the first thing communicated by the prover to the verifier, both parties possess knowledge of the witness.
+
+    \item Lemma 4, Eqn. (5) has a typo: the expression needs $L^{(j)}$.
+
+    \item Sec. 3.1 on page 2 has a typo: $D(x,y) = a(x) - y \cdot b(\underline{x})$.
+
+    \item In Lemma 3, it is never explained what $\mathds{A}$ represents. While not strictly a typo, we believe this was left over after other material got cut.
+
+    \item Sec 3.3 has a typo in condition (v): \textit{non-representability}.
+\end{enumerate}
+
+
+
+
+\section{Issues in More Detail}
+
+\subsection{Objectives}\label{sec:explainbetter}
+
+The relation $\mathcal{R}_{DL}$ being investigated in \cite{BassaSoundnessIPDL} is stated to be a discrete logarithm relation, relating $a \in \mathbb{Z}$ to elliptic curve group point $P$ whenever $P = a  \cdot G$. 
+So, it is natural to surmise that the protocol is intended to be a zero-knowledge proof of knowledge of a witness-statement pair in $\mathcal{R}_{DL}$. 
+\smallskip
+
+This is not so. Indeed, the interactive protocol asks the prover to reveal the binary expansion of $a$ in the first round of interaction, so the protocol is not a zero-knowledge proof of knowledge. In \cite{Eagen22}, Eagen emphasizes the difference between the elliptic curve over which statements are being proven and the elliptic curve over which the proofs are being computed, but readers benefit from greater explanation.
+\smallskip
+    
+In a personal communication with Luke ``Kayaba" Parker, we were informed that this protocol is intended to demonstrate $P = a \cdot G$ without the verifier needing to compute $a \cdot G$ from $a$ and $G$. That is to say, the protocol produces a proof of verifiable computation of $P$, and that that proving satisfaction of the arithmetic circuit for this protocol is to be done in zero-knowledge using the Bulletproofs proving system from \cite{Bullet}. 
+\smallskip
+
+The problem at hand is sufficiently complicated that omitting this context represents a subtle but persistent source of confusion for readers.
+
+\subsection{Benefits}\label{sec:benefits}
+
+The first round of interaction in the protocol reveals the binary expansion of the discrete logarithm and the polynomials defining the ``divisor witness.'' Hence, the protocol is both a trivially complete and trivially sound proving system, as extracting the binary expansion and recomputing $a$ requires no special effort. If any verifier can extract $a$ directly from any accepting transcript and confirm that $P=a \cdot G$ via usual scalar multiplication, what does this protocol improve upon? If this extraction is not sufficient, it is not clear why multiple transcripts with a common initial message and distinct challenges are necessary.
+
+\subsection{Security Definitions}\label{sec:sec_def}
+
+
+The protocol studied in \cite{BassaSoundnessIPDL} is trivially sound and complete, as the witness is revealed in the first round of interaction. Because of this, the protocol cannot be zero-knowledge. Readers would therefore benefit from clarifying which security definitions the protocol proving the relation $\mathcal{R}_{DL}$ is claimed to satisfy. 
+\smallskip
+
+In \cite{BassaSoundnessIPDL}, all the following are mentioned, but none are defined: knowledge soundness, $n$-of-$m$-special-soundness, and witness-extended emulation. 
+That the witness is immediately revealed, and therefore the protocol is trivially knowledge sound and complete, prompts many questions, some of which we outline here: 
+
+\begin{itemize} 
+\item Is the proof of $n$-of-$m$-special-soundness necessary? 
+\item Are the additional transcripts used only to check that the extracted witness satisfies the desired relation? 
+\item If the prior point holds, what is preventing the extractor from merely computing $a \cdot G$ directly? 
+\item Are the conclusions on soundness in \cite{BassaSoundnessIPDL} phrased in terms of witness-extended emulation to account for the fact that the witnesses are revealed? 
+\item If so, does the definition of witness-extended emulation capture the intended phenomena?
+\item It seems that the proof is intended to demonstrate $n$-of-$m$-special-soundness, but then the resulting corollary claims witness-extended emulation, and the relationship between these two definitions is not expanded upon.
+\item How can we reconcile the purported incompleteness from rewinding in \cite{BassaSoundnessIPDL} with the fact that the witness is directly revealed in every honest transcript?
+\end{itemize}
+
+
+
+\subsection{Zero-Knowledge Context}\label{sec:zk_context}
+    
+    Via personal communication with Luke ``Kayaba" Parker, we learned that this protocol will, in practice, be executed inside a Bulletproofs \cite{Bullet} wrapper. This is intended to make the proofs zero-knowledge. This context is not explained in \cite{Eagen22}, \cite{BassaLogDerivSoP}, \cite{BassaSoundnessIPDL}, or \cite{BassaSoundnessProofSoP}, so it is understandable that we missed this context. 
+    % as this protocol is lacking completeness, 
+    
+    
+    However, we fail to see how wrapping the protocol with a Bulletproof solves all the issues presented. 
+    % To the best of our knowledge, completeness is a requirement for a protocol that will end up inside a Bulletproofs wrapper, as otherwise it cannot be called a zero-knowledge proof - even ignoring the issue that the witness is immediately revealed \free{is this actually a problem?}. 
+    \begin{itemize}
+    \item It remains to be justified that this gadget, once wrapped in a Bulletproof, will work as a proof of knowledge in real-world applications, whether zero-knowledge or otherwise.
+    \item To the best of our knowledge, completeness is a requirement for a protocol that will end up inside a Bulletproofs wrapper. The protocol described in \cite{BassaSoundnessIPDL} has a non-zero completeness error, but also reveals its witnesses directly. Reconciling these facts is not trivial, and not explained sufficiently in either \cite{BassaSoundnessIPDL} or \cite{Eagen22}.
+    \end{itemize}
+
+    \subsection{Runtime and Acceptance Probability}\label{sec:runtime}
+
+    Without a formal proof, it is possible that the extractor in \cite{BassaSoundnessIPDL} runs in non-polynomial time or succeeds only with negligible probability.  Runtime and acceptance probability of the extractor constructed to establish soundness should be computed (at least asymptotically, if not more concretely) and it should be checked that the extractor behaves as expected. 
+    \smallskip
+    
+    Indeed, when the general forking algorithm is employed to obtain multiple transcripts for a large $q$, then the runtime of a $13kq$-out-of-$\left(\#E(\mathbb{F}_q)\right)^2$ soundness extractor is $O(q)$ but has success probability which decreases exponentially in $q$. Since $q$ is polynomial in the security parameter $\lambda$,  the extractor runs in linear time, but seems to succeed only negligibly. Without runtime and acceptance probability data, the proof of soundness in \cite{BassaSoundnessIPDL} is not finished, even as simply a sketch.
+
+    \subsection{Asymptotics and Concrete Results}\label{sec:asymptotics}
+    
+    The analysis in \cite{BassaSoundnessIPDL} seems asymptotically correct in the limit as the security parameter $\lambda \to \infty$, for a prime-valued $q$ which is polynomial in $\lambda$. However, relying on the proofs in \cite{BassaSoundnessIPDL} for some fixed $q$ without analyzing the asymptotic error may result in an incorrect impression of the true behavior. 
+    % In other words, if $q$ is a fixed $128$-bit prime, are practical implementations ``close enough'' for the asymptotic approximation to hold? If not, what about $256$-bit primes? $512$?
+    % \medskip 
+    For example, Corollary 6 ends with the claim that $\kappa \sim \frac{13k}{q}$, but this may be tightened as follows:
+    
+    % If we want to put the old stuff back, go for it. -RS
+    
+    % $$\kappa \leq \frac{13kq}{(\#E(\Fq))^2} \leq \frac{13kq}{(\sqrt{q} - 1)^4} = \frac{13k}{q - 4\sqrt{q} - \frac{4}{\sqrt{q}} + \frac{1}{q} + 6} \approx \frac{13k}{q - 4\sqrt{q}}$$
+
+    $$\kappa \leq \frac{13kq}{(\#E(\Fq))^2} \leq \frac{13kq}{(q-2\sqrt{q}+1)^2} \leq \frac{13kq}{(\sqrt{q}-1)^4} = \frac{13k}{q - 4\sqrt{q} - \frac{4}{\sqrt{q}} + \frac{1}{q} + 6} \approx \frac{13k}{q - 4\sqrt{q}}$$
+    
+    While this may appear pedantic, the additive $4\sqrt{q}$ factor is non-negligible, so should be included. As an example, the constant $10^{10^{10}}$ is certainly $O(1)$, and the function $q - 10^{10^{10}}$ is certainly $O(q)$, but neglecting the constant term obscures the true behavior for a concrete choice of $q$.  The same may be said for the completeness error:
+    $$\delta \leq \frac{3kq}{(\#E(\Fq))^2} \leq \frac{3k}{q - 4\sqrt{q} - \frac{4}{\sqrt{q}} + \frac{1}{q} + 6} \approx \frac{3k}{q - 4\sqrt{q}}.$$
+
+    % \item We find that the purpose of the paper \cite{BassaSoudnnessIPDL} is enigmatic. The author puts forward their analysis, sweeping many details under the rug and offering very little in motivation. For instance, the first step of the protocol is that the prover sends the witness $\6s$ to the verifier - if the verifier can use this to recompute $\sum_{i=0}^k s_i B_i$ and confirm that it is indeed equal to $a  \cdot G$ with perfect soundness and completeness, what does this protocol improve upon? 
+
+% \newpage
+% \section{old stuff - comment out later}
+
+
+% \subsection{Issues}
+% The Hasse bound on pg. 4 has a typo
+
+% I don't think the claim ``the challenge space has size $(\#E)^2$" is correct, due to the abort constraints. How many points does this take away? It should be $A_0$ is from $\left\{E - \{P \text{ s.t. } P \neq \O, \ D(P) \neq 0\}\right\}$ and $A_1$ is from $\left\{E - \{A_0\} - \{P \text{ s.t. } P \neq \O, \ D(P) \neq 0\} - \{A_2 = -(A_0 + A_1) \text{ s.t. } A_2 = A_0, A_1, \ A_2 \neq \O, \ D(A_2) \neq 0\} \right\}$
+
+% Sec. 2.3 literally not base-2?? That would need $s_i \in \{0,1\}$. 
+
+% Relation $\R_{DL}$ requires bounded values. Can be massaged to offer proof for same relation using different witnesses, since there doesn't appear to be a check that $s_i \in \{0,p\}$? Same issue before where statements over $\Z$ are transferred to mod $p$.
+
+% Sec. 2.3 is wrong when it says ``The witness
+% is only known to the verifier" lol. The vector $s$ is the first thing communicated.
+
+% % $\stackrel{\$}{\lar}$
+
+% In general, we need to recompute bounds for completeness and soundness. Also, the notation is very bad... Probably makes the most sense to use the two-sided version of the Hasse bound, which states that 
+% $$(\sqrt{q} - 1)^2 \leq n \leq (\sqrt{q} + 1)^2.$$
+
+% Section 3 `degree at most 2'? I think they mean it only needs $i=0,1,2$, but it's unclear what they mean by degree.
+
+% Lemma 4, Eqn. (5) has a typo: needs $L^{(j)}$
+
+% Lemma 2: what is an effective divisor? Check sources?
+
+% How protected is the analysis in Sec. 2.3 from naive attacks? Given $P$ and the $B_i$, can an adversary efficiently determine the $s_i$ such that $P = \sum s_i B_i$? I believe this is the \textit{vector form} of the discrete logarithm problem.
+
+% Sec. 3.1 typo: $D(x,y) = a(x) - y \cdot b(\underline{x})$
+
+% Does reusing a point cause problems? Like round one, verifier sends $A_0,A_1$, then round two sends $B_0 = A_0, B_1$.
+
+% What does Bassa mean in Sec. 2.1 when he says ``where $\sum_{i=0}^k 2^i$ is greater or equal to the order of the cyclic group E"? If that's true, then $\sum_{i=0}^k s_i 2^i$ with $0 \leq s_i < p$ has the potential to be greater than the sum without the $s_i$'s, so it could cycle around mod $p$. Surely this is undesirable? In the same vein, $a \in \Z$ instead of $a \in \Fp$.
+
+
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=0.75\linewidth]{EllipticOps.png}
+%     \caption{This is a diagram showing the possible point operations. Note that Bassa excludes cases 2-4.}
+%     % \label{fig:enter-label}
+% \end{figure}
+
+
+
+% \subsection{Kayaba Questions}
+% \begin{itemize}
+%     \item The first thing the prover does in Bassa's protocol is send $\6s$. If the verifier knows this vector, isn't the protocol trivially sound and complete? Since they can always check that $P = a  \cdot G = s_0 B_0 + \dots + s_k B_k$ for themselves, using the public points $\{B_i\}_{i=0}^k$. If ``we can think of the witness as given by the vector $\6s$", but also ``the witness is the discrete logarithm of $P$" which is $a$ such that $[a]G = P$, then doesn't knowledge of $\6s$ reveal the discrete log?
+
+%     \item What's the point of this protocol; what does Bassa claim to do better than the previous guy? If Bassa's protocol has better computational overhead (which I believe is his point), why is there no analysis to convince the reader of this claim?
+    
+%     \item Can't valid proofs of this form be massaged? In that if I know a valid proof for $a  \cdot G = s_0 B_0 + \dots + s_k B_k$, I can form a valid proof for $-a  \cdot G = (p-s_0) B_0 + \dots + (p-s_k) B_k$. Is this even useful, if the vector $\6s$ is known?
+
+%     \item Suppose an integer ($0 \leq a < p$) is written in ``base-2" notation where $$a = \sum_{i=0}^k s_i 2^i.$$
+%     Can't the verifier always guess at the $s_i$'s? Say if $a=4$, then $(1,0,0)$, $(0,2,0)$, and $(0,0,4)$ are all valid representations. Maybe this isn't important if the $s_i$'s are outright given...
+
+%     \item Do we think we can turn this into a zero-knowledge proof of knowledge? Perhaps tack on a Pedersen-style blinding factor...
+
+
+
+% \end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\bibliographystyle{alpha}
+\bibliography{archive.bib}
+
+\end{document}
