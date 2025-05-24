@@ -4,12 +4,18 @@
 \usepackage{bbold} % for blackboard bold 1 vector
 % \usepackage{todonotes} % for notes
 \usepackage{bm} % for bold Greek letter
+\usepackage{ dsfont } % for weird bb A character
+\usepackage{authblk} % for affiliations
 
-\title{Veridise Logarithmic Derivative Review}
-\author{Rigo Salazar, Freeman Slaughter, Luke Szramowski, $\sf{Cypher \ Stack}$
-\thanks{\url{https://cypherstack.com}}}
-\date{\today}
-\usepackage[margin=1.25in]{geometry}
+\title{A Review of the Veridise Discrete Logarithm Relation Gadget}
+
+% Interactive Protocol for the Discrete Logarithm Relation}
+\author{Brandon Goodell, Rigo Salazar, Freeman Slaughter, Luke Szramowski
+}
+\affil{$\mathsf{Cypher \ Stack}$}
+
+\date{17 March 2025}
+
 
 \theoremstyle{definition}
 \newtheorem{proposition}{Proposition}
@@ -17,8 +23,7 @@
 \newtheorem{definition}{Definition}
 \newtheorem{remark}{Remark}
 \newtheorem{problem}{Problem}
-% \newtheorem{lemma}{Lemma}[section]
-\newtheorem{lemma}{Lemma}
+\newtheorem{lemm}{Lemma}[section]
 \newtheorem{defn}{Definition} % [section]
 
 \def\do#1{\csdef{#1}{\mathbb{#1}}}
@@ -53,437 +58,351 @@
 
 % \newcommand{\todo}[1]{\textcolor{red}{#1}}
 \newcommand{\free}[1]{{\textcolor{red}{#1}}}
-\newcommand{\luke}[1]{{\textcolor{green}{#1}}}
+\newcommand{\luke}[1]{{\textcolor{purple}{#1}}}
 \newcommand{\rigo}[1]{{\textcolor{blue}{#1}}}
+\newcommand{\brando}[1]{{\textcolor{green}{#1}}}
 
 \newcommand{\divi}[1]{{\text{div}(#1)}}
 \newcommand{\lr}[1]{{\langle #1 \rangle}}
-
-\setlength\parindent{24pt}
 
 \begin{document}
 
 \maketitle
 
-This report contains a review of a logarithmic derivative technique report from Veridise. As with any such report, it may contain errors and cannot guarantee correctness or security. Further, it cannot guarantee that any particular implementation of the construction is correct, secure, or suitable for intended use cases. 
 
-The authors assert no warranty and disclaim liability for its use. The authors further express no endorsement of any kind. This report has not undergone any further formal or peer review
+
+
+
+As with any such report, this document may contain errors, and we cannot guarantee its correctness or security. 
+Further, no particular implementation of the construction is in the scope of this review, and we make no guarantees about the correctness, security, or suitability for intended use cases.
+The authors further express no endorsement of any kind. 
+This report has not undergone any further formal or peer review.
+
 
 \tableofcontents
 
-\section{Introduction}
+\subsection*{Change Log}
 
-%Work in \cite{BassaLogDeriv} describes applications of logarithmic derivatives...
-
-%The main Eagen paper is here \cite{Eagen22}. It has a lot of great background on elliptic curves in the introduction!
-
-% This may be a helpful reference for breaking Bassa's other paper \cite{Celi23}.
-\hspace{\parindent} We find that the original paper \cite{BassaLogDeriv} lacks a formal backing for the results used and proven. The mathematics contained in the report are sound, but lack direct reference to the results or do not contain enough justification to be taken at face value.\par
-
-\medskip 
-
-Within the findings section, we have included a rework of each section of the paper, including citations of results which are invoked, proofs of results which were stated but for which proofs were unavailable, and inclusion of important background information.
-
-\medskip 
-
-It is also of importance that the notation used possess a higher degree of specificity, which will be highlighted in the notation section below.
-
-
-\section{Notation}
-Throughout this report, the following notation will be used, unless otherwise specified.
+This document may be updated occasionally, especially if security-sensitive results come to light. We summarize such changes here.
 \begin{itemize}
-    \item Let $F$ denote the function field over $K$, where $K$ is perfect and the full constant field of $F$.
-    \item We denote the characteristic of $F$ as prime $p$.
-    \item Let $F^{\times}$ denote the multiplicative group of $F$.
-    \item For a point $P = (a,b)$ on an elliptic curve, we denote $x(P) = a$ and $y(P) = b$.
-    \item For an elliptic curve $E$, we denote $\mathcal{O}_{\infty}$ as the point at infinity.
-    \item Let $K[x,y]$ denote the ring of polynomials, in $x$ and $y$, with coefficients in $K$ and $K(x,y)$ denote the ring of rational functions in $x$ and $y$.
+\item 17 March 2025. Initial upload to GitHub.
+\item 15 April 2025. Remove redundant descriptions of mathematics presented in \cite{BassaSoundnessIPDL}, rewrite to clarify conclusions.
+\item 23 May 2025. Add change log and minor modifications to wording.
 \end{itemize}
 
-% \section{Background}
+% \subsection{ONGOING NOTES FOR THE BOYS}
 
-% \free{This is currently just stream of thought :)}
+% \begin{enumerate}
+%     % \item 1 April: moved notes in changelog to standalone items. Still waiting on Brandon's thoughts, still waiting on Luke and Rigo to add their thoughts.... $>:($
 
-% A divisor is a way to keep track of the roots and poles of a function. Sort of like how if I gave you roots $2$ and $-2$, you could recover $x^2-4$ (up to a constant factor) using only the roots.
-% A divisor is a sum of the form $n_1 P_1 + \dots + n_k P_k$ with integers $n_i$, and the sum of the $n_i$'s is the degree of the divisor. Divisors are a requirement to talk about poles, and Riemann-Roch characterizes the set of functions having specific poles (ie: that represent a specific divisor).
+%     % \item Put $\6s$ into Pedersen commits? Not clear why it needs to be length $k$. The fact we even have to ask Kayaba makes me ANGWY! 
 
+%     % \item Why was it necessary to have the binary decomposition? Kayaba stated in person was this was an optimization for the hamming weight so a note should be made about that in the paper. Future people who may try to implement this may choose p-ary representations and then have massive implementation issues  (major issue)
 
-% % Let $P=(a,b)$ be a point. 
-% Let $f$ be a function with a root $P$ of order $3$, a pole $Q$ of order $2$, and a pole $\O$ of order $1$ (at infinity). Note that the number of roots and poles must coincide. Using divisors, we can write $\divi{f} = \lr{f} = 3\lr{P} - 2\lr{Q} - \lr{\O}$.
-% Consider $f(x,y) = x-a$ where $P = (a,b)$ is a point on $y^2 = x^3 + Ax + B$. Then the divisor of this function is $\divi{f} = P + Q - 2\infty$. That is, $f$ has a simple root at $P = (a,b)$ and $Q = (a,-b)$, so also has a double-pole at infinity. Indeed, $f(P) = f(Q) = 0$, with no other roots.
-% As another example, the Tate pairing is defined as the function $\tau_r(x,y) = f_{\tau}(y)^{\frac{q^k-1}{r}}$ where $f_{\tau}$ is a rational function with divisor $r \lr{P} - r \lr{\infty}$, meaning it has $r$ roots at point $P$ and $r$ poles at infinity. This function is one of the few pairings used in pairing-based crypto (the other being Weil's) and can be efficiently computed using Miller's.
+%     % \item While Kayaba states that the lack of completeness won't be an issue when the gadget is wrapped up in a bulletproof, most bulletproof implementations seem to have completeness as a given. Therefore, it needs to be justified why a lack of completeness in this gadget will still work within the confines of the BP. (major issue)
 
+%     % \item Brandon says: "in neither of the papers is the runtime assessed or success probability". Also, their soundness and related terms are not defined 
 
-% Let $f(x) = \prod_{i=1}^{k} (x - r_i)^{m_i}$, so it has roots $r_i$ with multiplicities $m_i$. Then $f'(x) = \prod_{i=1}^{k} (x - r_i)^{m_i-1} g(x)$ where $g$ may have roots besides the $x_i$'s. Then the l
-
-% Let $r$ be a root of $f$ with multiplicity $m$, so that $f(x) = (x - r)^m g(x)$ where $g(r) \neq 0$. Then $f'(x) = k (x-r)^{m-1} g(x) + (x - r) g'(x)$, so we get that 
-% $$\frac{f'(x)}{f(x)} = \frac{m}{z-r} + \frac{g'(x)}{g(x)}.$$
-% Since $g(r) \neq 0$, it's clear that $\frac{g'(x)}{g(x)}$ has no poles at $r$. So the pole of $\frac{f'(x)}{f(x)}$ at $r$ is $m$.
-% However, if we consider now $f(x) = (x - r)^{-m} g(x)$ where $m$ is now the multiplicity of the pole, we get that $$\frac{f'(x)}{f(x)} = \frac{-m}{z-r} + \frac{g'(x)}{g(x)},$$
-% or that the pole of the logarithmic derivative has multiplicity $-m$.
-% That is, for each root of $f$ with multiplicity $m$, the logarithmic derivative has a simple pole with multiplicity $m$, and for each pole of $f$ with multiplicity $m$, the logarithmic derivative has a simple pole with multiplicity $-m$. There will be no other poles or roots for the logarithmic derivative.
-% Thus all the poles are simple (see Cauchy's argument principle!!!)
+%     % \item Remove judgey language: if you see an adjective which is judge judy, just remove it. We don't have to be vicious attack dogs, we don't have to be super diplomatic, just honest.
 
 
+%     % \item Make it so that part of the time, they have to actually fully compute the point mults
 
+%     % \item Brandon is making a major issue out of the witness extended emulation junk <-- lol
+
+
+%     % \item
+    
+% \end{enumerate}
 
 
 
+\section{Introduction}
+
+We review ``Soundness Proof for an Interactive Protocol for the Discrete Logarithm Relation'' (\cite{BassaSoundnessIPDL}) by Alp Bassa at Veridise, which intends to formalize the protocol informally described in \cite{Eagen22} and establish its soundness. This can also be viewed as a formalization and improvement upon the gadget presented in \cite{KayabaR1CS}.
+The intended application is full-chain membership proofs (FCMP++, \cite{KayabaFCMP}) for privacy-respecting cryptocurrency protocols.
+\smallskip 
+
+The scope of our review is restricted to \cite{BassaSoundnessIPDL}, but information from \cite{Eagen22}, \cite{BassaLogDerivSoP}, and \cite{BassaSoundnessProofSoP} are necessarily discussed, along with insights obtained from personal communications with Luke ``Kayaba" Parker regarding the intended use-case in Monero.
 
 
 
-\section{Restructure}
-\subsection{Regarding Derivations}
-
-\medskip
-
-\begin{definition}
-    A \textit{derivation} of the quotient field $F/K$ into $F$ is a $K$-linear map $\delta : F \rightarrow F$ such that, for each $f,g \in F$, it holds that $\delta(f \cdot g) = f \cdot \delta(g) + \delta(f) \cdot g$.
-\end{definition}
-
-% \medskip
-
-\begin{definition} [\cite{Dummit04}, 551]
-    The field $K$ is said to be \textit{separable} (or \textit{separably algebraic}) over $F$ if every element of $K$ is the root of a separable polynomial over $F$. Equivalently, the minimal polynomial over $F$ of every element of $K$ is separable.
-\end{definition}
-
-% \medskip
+\section{Executive Summary}
 
 
-\begin{definition}
-    A \textit{separating element} of $F/K$ in $F$ is defined as any element for which $F/K(x)$ is a separable algebraic extension. 
-\end{definition}
+% The results and their proofs in \cite{BassaSoundnessIPDL} are plausible, but the paper has both minor and major issues - which admittedly may not have been within scope. Some of these issues represent nontrivial problems with the validity of the approach in \cite{Eagen22}, and these should be addressed further prior to deployment in production.
+We find that the results and proofs in \cite{BassaSoundnessIPDL} are plausible. However, the paper contains both minor and major issues, some of which may fall outside of its original scope. Notably, several of these issues pose nontrivial challenges to the validity of the approach presented in \cite{Eagen22}, and these concerns should be carefully addressed before considering on-chain deployment.
+\smallskip
 
-% \medskip
-
-\begin{definition}
-    Let $F$ be a field and $K$ be a finite extension of $F$. Let $\alpha \in K$ and define the linear transformation $\ell_{\alpha} : K \rightarrow K$ by $\ell_{\alpha}(x) \mapsto \alpha \cdot x$.
-    Then the \textit{field norm} of $\alpha$ with respect to $F/K$ is defined to be the determinant of $\ell_{\alpha}$.
-\end{definition}
-
-% \medskip
-
-We recall some properties regarding derivations and separating elements, which are from \cite{Stichtenoth93}:
-
-  
-\begin{proposition}[\cite{Stichtenoth93}, Proposition 4.1.4b]\label{prop:414b}
-    For each separating element $z$, there exists a unique derivation $\delta_z$ such that $\delta_z(z) = 1$.
-\end{proposition}
-
-% \medskip
-
-\begin{lemma}[\cite{Stichtenoth93}, Lemma 4.1.6a]\label{lemma:416a}
-    For each derivation $\eta$ and $x \in F$, we have that
-    $$\eta = \eta(x) \cdot \delta_x.$$ 
-\end{lemma}
-
-% \medskip
-
-\begin{lemma}[\cite{Stichtenoth93}, Lemma 4.1.6b]\label{lemma:416b}
-    Let $x$ and $y$ be separating elements. Then it holds that
-    $$\delta_y = \delta_y(x) \cdot \delta_x.$$
-\end{lemma}
-
-% \medskip
-
-\begin{lemma}[\cite{Stichtenoth93}, Lemma 4.1.6c]\label{lemma:416c}
-    Let $t \in F$. Then $\delta_x(t) \neq 0$ if and only if $t$ is a separating element.
-\end{lemma}
-
-% \medskip
-
-\begin{definition}
-    Given a function field $F/K$ and a derivation $\delta$, the \textit{logarithmic derivative} is the map $L : F^{\times} \rightarrow F$ defined as $L(f) = \frac{\delta(f)}{f}$.
-\end{definition}
-
-% \medskip
-
-In the classical case from calculus, this corresponds to $\frac{\mathrm{d}}{\mathrm{dx}} \ln(f(x))$ for a function $f(x)$. 
-This map defines a group homomorphism, which can be seen by the following:
-
-\medskip
-
-$$L(f \cdot g) = \frac{\delta(f \cdot g)}{f \cdot g} = \frac{f \cdot \delta(g) + \delta(f) \cdot g}{f \cdot g} = \frac{\delta(f)}{f} + \frac{\delta(g)}{g} = L(f) + L(g).$$
+Please note that our judgment on the parts of \cite{BassaSoundnessIPDL} which may require refinement are likely to differ from the opinions of other authors. 
+We emphasize that we have no knowledge of the scope imposed on \cite{BassaSoundnessIPDL}.
+While we believe our list to be fair,  we do not believe it to be exhaustive.  
+% We suspect that a thorough inspection of \cite{BassaSoundnessIPDL} may reveal unaddressed roadblocks, and possibly flaws.
+It is additionally our belief that a thorough revision of the report addressing the issues highlighted in this document could uncover potential flaws yet undiscovered in the protocol.
 
 
+\section{Major and Minor Issues}
 
-
-\subsection{Characterization of the Kernel}
-
-We can use Lemma \ref{lemma:416c} to characterize the kernel of the logarithmic derivative. In specific,
-$$\ker(L) = \{t \in F^{\times} : L(t) = 0 \}.$$
-
-We can first notice that the kernel of $L$ is determined entirely by the kernel of the derivation, since:
-\begin{align*}
-    L(t) = 0 &\Leftrightarrow \frac{\delta(t)}{t} = 0 \\
-    &\Leftrightarrow \delta(t) = 0 \text{ and } t \neq 0.
-\end{align*}
-
-So, we can note that all non-trivial elements of the kernel of $L$ will be exactly the non-trivial elements of the kernel of $\delta$. 
-
-\medskip 
-
-\begin{remark}
-    In order to increase readability, it should be noted that when $\delta$ is invoked, it is simply $\delta_a$ for some separating element $a$. The particular element is not chosen specifically - nor does it need to be, by Lemma \ref{lemma:416b}, since each derivation is only going to differ by some non-zero scalar. 
-\end{remark}
-
-
-
-\begin{lemma} Let $a,b$ be separating elements in $F$. Then:
-$$\ker(\delta_a) = \ker(\delta_b).$$
-\end{lemma}
-
-\begin{proof}
-    We shall go about this by subset containment, then conclude by similarity of cases.
-    Let $k \in \ker(\delta_a)$. Since $a,b$ are separating elements, Lemma \ref{lemma:416b} implies that
-    $$\delta_a = \delta_a(b) \cdot \delta_b.$$
-    By Lemma \ref{lemma:416c}, we have that $\delta_a(b) \neq 0$. Taking the evaluation of $k$ on both sides yields:
-    % \begin{align*}
-    %     \delta_a(k) &= \delta_a(b) \cdot \delta_b(k) \\
-    %     &\Rightarrow 0 = \delta_a(b) \cdot \delta_b(k).
-    % \end{align*}
-    $$0 = \delta_a(k) = \delta_a(b) \cdot \delta_b(k).$$
-    Since $\delta_a(b) \neq 0$, it must be the case that $\delta_b(k) = 0$. So, $k \in \ker(\delta_b)$, as desired. It is clear that if we started with $l \in \ker(\delta_b)$ that the same argument would show  $l \in \ker(\delta_a)$, therefore we have our desired result.
-\end{proof}
-
-\medskip
-
-The first thing we can notice is that if $k \in K$, then it is not a separating element, and as such, $\delta(k) = 0$, by the equivalence prior stated in Lemma \ref{lemma:416c}. Thus, $K \subset \ker(\delta)$. In essence, elements of $K$ behave the way constant values do in single-variable calculus.
-
-\medskip 
-
-Due to the result from Lemma \ref{lemma:416c}, we can see that the kernel is exactly described as the set of all non-separating elements. An exact characterization of this is given in 
-(\cite{Stichtenoth93}, Proposition 3.10.2), which allows us to note that:
-$$\ker(L) = \{f \in F^{\times} : f \in K \text{ or } f = u^p \text{ with } u \in F^{\times}\}.$$
-This characterization lends itself nicely to our intuition regarding derivatives from calculus: the kernel clearly contains constant terms, whose derivatives should vanish and all terms that would result in a multiple of $p$ being produced would vanish as well. This characterization is important to the results below, so keep it in mind moving forward.
-
-\subsection{Notes on the Degree}
-\begin{definition}
-    For $t \in F \setminus K$, the \textit{degree} of $t$ in $F$, which we denote as $\deg_F(t)$, is defined as $\deg_F(t) = [F : K(t)]$.
-\end{definition}
-
-
-We can note that since the field has characteristic $p$, the degree of the polynomial is exactly what one would expect. However, since fields don't possess an inherent metric which gives a useful scale to field elements, the workaround is to define such a measure algebraically. 
-
-The following quantities are equal:
+\subsection{Major Issues}\label{sec:maj}
 
 \begin{enumerate}
-\item $\deg_F(t)$
-\item $\deg(t)_{\infty}$, which denotes the pole divisor of $t$ in $F$.
-\item $\deg(t)_0$, which denotes the zero divisor of $t$ in $F$.
+    \item Clear definitions at the beginning of a manuscript clarify writing. Defining all terms at the start of a paper helps readers understand the arguments, avoid confusion, follow the reasoning without searching for definitions elsewhere, as well as mitigates ambiguity between references with different notation.  This is true even for standard definitions. \cite{BassaSoundnessIPDL} provides references in the literature instead, leaving it to the reader to cross-reference the proofs within against the definitions contained in other references.
+    % \brando{Is this a major issue for most mathematicians, or is this a major issue for pedants like myself?}
+
+    \item Explanations for the objectives of the manuscript are warranted. The intended use-case of the protocol investigated in \cite{BassaSoundnessIPDL} is not described, and reasonable presumptions by readers are significant sources of confusion. We elaborate on this below in Section \ref{sec:explainbetter}.
+    
+
+    \item Explanations of the benefits to using the described protocol instead of other methods are necessary. We elaborate on this below in Section \ref{sec:benefits}.
+
+    \item Since witnesses are revealed directly, the protocol appears to be trivially complete and trivially sound. Explanations of the security definitions being investigated are required.
+    \begin{itemize}
+    \item It is not clear to us how the incompleteness of the protocol purported in \cite{BassaSoundnessIPDL} and \cite{Eagen22} can be reconciled with the ostensible trivial completeness obtained from the revealed witness. 
+
+    \item We are not convinced that the notion of soundness demonstrated in this document is necessary or sufficient for intended use-cases, as the elaborate extractor which requires $13kq$ transcripts seems to be easily replaced with an extractor which reads the witness directly from the transcript. 
+    \end{itemize} 
+     We elaborate on this and more below in Section \ref{sec:sec_def}.
+
+
+    
+    \item \cite{BassaSoundnessIPDL} provides no description for the zero-knowledge context within which this protocol is intended to be deployed. We are skeptical that context can be ignored. We discuss this in Section \ref{sec:zk_context}. 
+
+
+    \item Without a formal proof, it is possible that the extractor in \cite{BassaSoundnessIPDL} runs in non-polynomial time or succeeds only with negligible probability. We discuss this in Section \ref{sec:runtime}. 
+
+    \item Simplifications should be avoided if possible, even though they are expedient. 
+    We suspect that the proofs in \cite{BassaSoundnessIPDL} can be improved across the board by avoiding these abridgments. For example, instead of relaxing the Hasse bound to $n = O(q)$, the inequality $(\sqrt{q} - 1)^2 \leq n \leq (\sqrt{q} + 1)^2$ can be used instead, revealing important computational factors. 
+    
+    \item Asymptotic results are not concrete results. We discuss this further in Section \ref{sec:asymptotics}. 
+    
+    \item  The security of this protocol is not truly based on the discrete logarithm problem: given $G$ and $P$, recover $a$ such that $P = a \cdot G$. Rather, it is a \textit{generalized} discrete logarithm problem (some authors call this the \textit{vector form} of the discrete logarithm problem, others reserve ``generalized" for a different problem altogether): given $G, B_1, \dots, B_k$ and $P$, recover $a, s_1 \dots, s_k$ such that $P = a \cdot G + s_1 \cdot B_1 + \dots + s_k \cdot B_k$. Over $\Fp$, we do not expect that the generalized discrete logarithm problem can be solved faster than the standard version, but an analysis should be presented assuring the reader that even the state of the art naive algorithms have an intractable runtime. %Although, it appears that there may be lattice algorithms with results in this direction \cite{Ducas18}. 
+    % Unsurprisingly, it looks like subset-sum solvers may also be applied here in order to naively recover $a, s_1 \dots, s_k$.
+
 \end{enumerate}
 
-We can further note here that if the base field $F$ and the rational function field $K(x)$ coincide, then the usual definition of degree holds. That is, for $a(x),b(x) \in F$, which are relatively prime:
-$$\deg_{F} \left( \frac{a(x)}{b(x)} \right) = \deg_{K(x)} \left( \frac{a(x)}{b(x)}\right) = \max \left \{ \deg(a(x)), \deg(b(x))\right \},$$
-where the degree contained in the maximum is the standard polynomial degree.
-
-\medskip 
-
-It should be remarked that the degree operation behaves in a logarithmic fashion, in the sense that we can extract powers from it. 
-That is, for $t = u^x$, then it holds that $\deg_F(t) = \deg_F(u^x) = x \cdot \deg_F(u)$, where $u \in F$ and $x \in K$. %\free{where $u$ and $x$ come from?}.
-
-\medskip 
-
-With the prior background knowledge in mind, let us consider the following lemma:
-\begin{lemma} Let $f,g \in F$, where $\deg_F(f), \deg_F(g) < p$. Then $L(f) = L(g)$ if and only if $f = c \cdot g$ for some $c \in K$.
-\end{lemma}
-
-
-\begin{proof}
-    ($\Leftarrow$) We first establish the backward direction: let $f,g \in F$. Suppose that there exists some $c \in K$ such that $f = c \cdot g$. 
-    % Now, let us directly compute the logarithmic derivative of each:
-    Using the definition of a derivation, the calculation is as follows:
-    $$L(f) = \frac{\delta(f)}{f} = \frac{\delta(c \cdot g)}{c \cdot g} = \frac{c \cdot \delta(g) + \delta(c) \cdot g}{c \cdot g} = \frac{c \cdot \delta(g)}{c \cdot g} = L(g)$$
-    
-    % \begin{align*}
-    %     L(f) &= \frac{\delta(f)}{f} \\
-    %     &= \frac{\delta(c \cdot g)}{c \cdot g} \\
-    %     &= \frac{c \cdot \delta(g) + \delta(c) \cdot g}{c \cdot g} \\
-    %     &= \frac{c \cdot \delta(g)}{c \cdot g} \\
-    %     &= \frac{\delta(g)}{g} \\
-    %     &= L(g).
-    % \end{align*}
-    % $$L(f) = \frac{\delta(f)}{f}.$$
-    % $$L(g) = \frac{\delta(g)}{g} = \frac{\delta(c \cdot f)}{c \cdot f}.$$
-    % Recall that the derivation $\delta$ abides by the Leibnitz rule, so we can compute $\delta(c \cdot f)$ as follows:
-    % $$\delta(c \cdot f) = c \cdot \delta(f) + \delta(c) \cdot f.$$
-    % We can recall that the derivation of a constant is equal to zero, so the above summation collapses to:
-    % $$\delta(c \cdot f) = c \cdot \delta(f).$$
-    % By replacement and simplification, we see that
-    % $$L(g) = \frac{\delta(c \cdot f)}{c \cdot f} = \frac{c \cdot \delta(f)}{c \cdot f} = \frac{\delta(f)}{f} = L(f),$$
-    % as desired.
 
 
 
 
 
-    ($\Rightarrow$) Now we show the forward direction. We start by assuming that $L(f) = L(g)$, and $\deg_F(f), \deg_F(g) < p$.
-    Let us recall from prior assumption that the ambient field $K$ is perfect; that is, that every polynomial splits into linear factors. As such, we can define $f$ and $g$ as follows:
-    $$f(x) = a \prod_{i = 1}^{p - 1} (x - r_i) \quad \text{ and } \quad g(x) = b \prod_{i = 1}^{p - 1} (x - q_i),$$
-    where $a,b,r_i,q_i \in K$ for all $i$. Now, taking the logarithmic derivative, we find that
-    $$L(f(x)) = a \sum_{i = 1}^{p-1}\frac{1}{x - r_i} \quad \text{ and } \quad L(g(x)) = b \sum_{i = 1}^{p-1} \frac{1}{x - q_i}.$$
-    Given that $L(f) = L(g)$, it must be the case that the functions possess poles at the same locations with the same multiplicity. Specifically, that 
-    $$a \sum_{i = 1}^{p-1}\frac{1}{x - r_i} = b \sum_{i = 1}^{p-1} \frac{1}{x - q_i},$$
-    hence there  must exist some permutation $\pi$ such that $r_{\pi(i)} = q_i$.
-    Then it must be the case that the roots of $f$ are precisely the roots of $g$, where the functions themselves can differ only by a multiplicative constant, as claimed. 
-
-    
-    % Now, let us consider the forward direction. Let us assume that $L(f) = L(g)$, and $\deg_F(f), \deg_F(g) < p$. Let us recall from prior in the paper, that the ambient field $K$ is perfect, that is, every polynomial splits into linear factors. As such, we can define $f$ and $g$ as follows:
-    % $$f(x) = a \prod_{i = 1}^{p - 1} (x - r_i)$$
-    % $$g(x) = b \prod_{i = 1}^{p - 1} (x - q_i)$$
-    % where $a,b,r_i,q_i \in K$. Now, we can notice that, taking the logarithmic derivative of both will yield:
-    % $$L(f(x)) = a \sum_{i = 1}^{p-1}\frac{1}{x - r_i}$$
-    % $$L(g(x)) = b \sum_{i = 1}^{p-1} \frac{1}{x - q_i}$$
-    % Since $L(f) = L(g)$, it must be the case that the functions possess poles at the same locations, with the same multiplicity. As such, there must exist some permutation $\pi$ such that:
-    % $$r_{\pi(i)} = q_i$$
-    % Thus, it must be the case that the roots of $f$ are precisely the roots of $g$, and as such, the functions can differ by, at most, a multiplicative constant, as desired. 
-\end{proof}
-
-
-
-\begin{remark}
-    It should be noted that if $K$ is not a splitting field of $F$, the proof becomes far more difficult. The inclusion of the perfectness of $K$ is necessary to draw this result.
-\end{remark}
-
-% \medskip
-
-\subsection{Precursory Substitutions}
-
-Let us define $\mathbb{F}_q(E)$ to be the function field of the elliptic curve $E$, given by the equation:
-$$y^2 = x^3 + Ax + B,$$
-where $A,B \in \mathbb{F}_q$. Let $D(x,y) \in \mathbb{F}_q(E)$. We can recall that $D(x,y)$ will be a polynomial in indeterminate $x$ and $y$, and we shall only consider the evaluation of $D(x,y)$ on points which fall on the curve. Let us further assume it only possesses poles at the point at infinity. We can explicitly express $D(x,y)$ in the following form, for some natural numbers $n,m$: 
-$$D(x,y) = \sum_{i = 0}^n \sum_{j = 0}^m a_{i,j} x^i y^j.$$
-
-We can notice that everywhere $y^2$ (or some power of $y^2$) appears in the summation, it can be replaced by the equation of the curve. Furthermore, every odd power of $y$ can also undergo this replacement after separating the even component of the power (for example, $y^3=y^2\cdot y$). Using this method, we can re-express this as $D(x,y) = a(x) - y \cdot b(x)$
-for some polynomials $a(x),b(x) \in \mathbb{F}_q(x)$.
-
-Now, let us consider the substitution $z = y - \lambda \cdot x$ for some $\lambda \in \mathbb{F}_q$. Substituting this into the original curve, we obtain
-$$0 = y^2 - x^3 - A \cdot x - B = (z + \lambda \cdot x)^2 - x^3 - A \cdot x - B.$$
-Expanding and collecting like terms, we find that
-$$x^3 - (\lambda \cdot x)^2 + (2 \lambda z + A) \cdot x + (B - z^2) = 0.$$
-We can notice that in order to obtain $\mathbb{F}_q(E)$ from $\mathbb{F}_q(z)$, we need to simply adjoin a root of the above polynomial. As it is a third degree polynomial, we can denote the roots of the polynomial as $x_0,x_1$ and $x_2$. Let $y_i = z - \lambda \cdot x_i$. We shall use the above substitution in the derivation given in the next subsection.
-
-\subsection{Formal Deduction of the Desired Formula}
-
-\medskip
-
-\begin{remark}For all the following derivations, we shall include comments on an operation-by-operation basis to reduce confusion, as well as simplify notation where needed.
-\end{remark}
-
-We wish to find an expression for the logarithmic derivative of the norm of $D(x,y)$. To do this, consider the following steps:
+\subsection{Minor Issues}\label{sec:min}
 
 \begin{enumerate}
-\item Let us begin by symbolically noting that the quantity we wish to derive an expression for is given by
-$$L(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))) = \frac{\delta_z(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y)))}{N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))}.$$
 
-\item By the result given in [\cite{Dummit04}, Exercise 17], we have that
-$$N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y)) = \prod_{i = 0}^2 D(x_i,y_i).$$
-
-\item We can notice that taking the logarithmic derivative will require us to find the derivation of this product. Since the Leibnitz rule holds, we can see that
-$$\delta_z\left( \prod_{i = 0}^2 D(x_i,y_i) \right) = \sum_{j = 0}^2 \frac{\prod_{i = 0}^2 D(x_i,y_i)}{D(x_j,y_j)} \delta_z(D(x_j,y_j)).$$
-
-\item \label{item:dzD} So, let us determine an expression for $\delta_z(D(x_j,y_j))$. Starting from $D(x_j,y_j) = a(x_j) - y_j \cdot b(x_j)$, we have that:
-% $$\delta_z(a(x_j) - y_j \cdot b_j(x_j)) = \delta_z(a(x_j)) - \delta_z(y_j \cdot b_j(x_j)).$$
-% Taking the derivation, with care to respect the chain and product rule, we have:
-$$\delta_z(D(x_j,y_j)) = \delta(x_j) \cdot a'(x_j) - \delta_z(y_j) \cdot b(x_j) - y_j \cdot b'(x_j) \delta_z(x_j),$$
-where $a'(x_j)$ and $b'(x_j)$ are the usual derivatives on polynomials.
-
-\item Now, let us recall that $y_j^2 = x_j^3 + A \cdot x_j + B$. Taking $\delta_{x_j}$ of both sides and collecting terms yields
-% $$\delta_{x_j}(y_j^2) = \delta_{x_j}(x_j^3 + A \cdot x_j + B) \Rightarrow 2 \cdot y_j \cdot \delta_{x_j}(y_j) = 3 \cdot x_j^2 + A$$
-$$\delta_{x_j}(y_j) = \frac{3 \cdot x_j^2 + A}{2 \cdot y_j}.$$
-
-\item \label{item:dxj} We re-parameterize the derivation with respect to $z$, since $\delta_v = \delta_v(w) \cdot \delta_w$ (using Lemma \ref{lemma:416b}), which leaves us with
-$$\delta_z(y_j) = \frac{3x_j^2 + A}{2 \cdot y_j} \delta_z(x_j).$$
-
-\item As $z = y_j - \lambda \cdot x_j$, taking the derivation results in $\delta_z(z) = \delta_z(y_j) - \lambda \cdot \delta_z(x_j)$, which paired with the above and \ref{prop:414b} gives
-$$\left( \frac{3x_j^2+A}{2 \cdot y_j} - \lambda \right) \cdot \delta_z(x_j)=1.$$
-
-\item \label{item:dzxj} With the above expression, we can solve for $\delta_z(x_j)$:
-$$\delta_z(x_j) = \frac{2 \cdot y_j}{3x_j^2 + A - \lambda \cdot 2 y_j}.$$
-
-\item We now have all the pieces needed to simplify the expression for the logarithmic derivative of the norm of $D(x,y)$. By definition, we have that
-$$L(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))) =  \sum_{j = 0}^2 \frac{\delta_z(D(x_j,y_j))}{D(x_j,y_j)}.$$
+    % \item The paper \cite{BassaSoundnessIPDL} attempts to prove some flavor of $n$-of-$m$-special-soundness of an interactive protocol suggested in \cite{Eagen22}. \cite{BassaSoundnessIPDL} does not establish any of the basic definitions at hand related to general proving systems, like their completeness, knowledge soundness, $n$-of-$m$-special soundness, witness-extended emulation, and zero-knowledge-ness.
+    % While these are standard definitions, this forces readers to refer to references throughout
+    
+    \item In the main protocol, the verifier's first action is to sample $A_0, A_1 \lsamp E$, where $\lsamp$ indicates samples taken uniformly at random. Later, in Corollary 6, the knowledge error is calculated as
+    $$\kappa \leq \frac{13kq-1}{(\#E(\Fq))^2}$$
+    ie: that the protocol is $13kq$-out-of-$(\#E(\Fq))^2$-special-sound. The Hasse bound provides the bounds $q  - 2\sqrt{q} + 1 \leq \#E(\Fq) \leq q + 2\sqrt{q} + 1$, so we have \[\frac{13kq-1}{(q+2\sqrt{q}+1)^2} \leq \frac{13kq-1}{(\#E(\Fq))^2} \leq \frac{13kq-1}{(q-2\sqrt{q}+1)^2}.\] In fact, we can only guarantee a knowledge error $\kappa = O(\frac{13kq-1}{(q-2\sqrt{q}+1)^2})$. Of course, this is $O(q^{-1})$ as claimed by Bassa. However, the tightness of this bound and the value of $(k,q)$ are both critical to practical, concrete security, yet not investigated. 
+    However, due to the abort constraints, the sample set cardinality is strictly smaller than $(\#E(\Fq))^2$. Indeed, even only demanding that the points be distinct will shrink the set slightly. This compounds the concrete worsening of $\kappa$. Assessing practical impact requires more precise analysis.
+    \smallskip 
+    
+    We agree informally that the challenge set size is large and very close to $(\#E(\Fq))^2$. We agree informally that the stated knowledge errors for the extractor built in \cite{BassaSoundnessIPDL} are reasonable approximations of the true values. We agree informally that the conditions causing an abort are sufficiently rare as to not present a practical problem. However, these details ought to be filled in and formalized. The total abort probability should be formally and precisely computed (and this is necessary to precisely compute the acceptance error).
+    
+    % In private communications with Kayaba, we were assured that this is not a major issue, but nonetheless a comprehensive analysis should be put forth to justify that this restriction is not damaging.
 
 
-Applying Item \ref{item:dzD} above, we have that
-$$L(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))) =  \sum_{j = 0}^2 \frac{\delta(x_j) \cdot a'(x_j) - \delta_z(y_j) \cdot b(x_j) - y_j \cdot b'(x_j) \delta_z(x_j)}{D(x_j,y_j)}.$$
+    \item In Sec. 2.3, the exponent is represented in ``base-2" notation, which takes the form 
+    $$a = \sum_{i=0}^k s_i \cdot 2^i$$
+    for $s_i \in \Z$. Even with the assumption that $0 \leq s_i < p$, this is not actually the base-2 representation. This type of representation is \textit{highly} malleable, giving a great many distinct but equivalent representations, even if restricted to $\Fp$. For instance over $\Z$, or $\Fp$ for $p$ large enough, we can represent $4$ as $1 \cdot 2^2$, or $2 \cdot 2^1$, or $4 \cdot 2^0$, resulting in vector representations of $(100)$, $(020)$, and $(004)$ respectively. The point of these $s_i$'s, which is unfortunately never stated, is that these values will be selected in order to optimize certain constraints in the R1CS presented in \cite{KayabaR1CS}. Any future readers who attempt to naively implement the results of \cite{Eagen22} would be at a disadvantage - because the purpose of permitting such a wide spread of allowed $s_i$ values is not clear, they may select parameters that are far from optimization, thus negating some of the computational benefit of the protocol.
 
-Using Item \ref{item:dxj} above, we can substitute $\delta_z(y_j)$ to obtain
-$$L(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))) =  \sum_{j = 0}^2 \frac{\delta(x_j) \cdot a'(x_j) - \left( \frac{3x_j^2 + A}{2 \cdot y_j} \delta_z(x_j)\right) \cdot b(x_j) - y_j \cdot b'(x_j) \delta_z(x_j)}{D(x_j,y_j)}.$$
 
-Notice that the numerator possesses $\delta_z(x_j)$ in each of its terms, thus it may be factored out as follows
-$$L(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))) =  \sum_{j = 0}^2 \frac{a'(x_j) - \left( \frac{3x_j^2 + A}{2 \cdot y_j}\right) \cdot b(x_j) - y_j \cdot b'(x_j)}{D(x_j,y_j)} \delta_z(x_j).$$
+    \item Restrictive hypotheses placed on provers and verifiers may help clarify our problems with using $n$-of-$m$-special-soundness. Consider the binary decomposition of the discrete logarithm $\6s$, and the point $P$, which are both learned by verifiers in the protocol for $\mathcal{R}_{DL}$. 
+    \begin{itemize}
+    \item An extractor for this protocol as-is can use $\6s$ from the transcript to compute $a = \sum_{i=0}^k s_i \cdot 2^i$, and then can use $a$ to compute $Q = a \cdot G$, and check if $Q = P$, yielding trivial soundness.
+    \item In the Generic Group Model, the prover has access to an oracle through which all group operations must be computed: $\mathcal{O}(G_1, G_2) = G_1 + G_2$. The transcript of the prover in the GGM reveals a (sequence of) oracle queries $(G_{i,1}, G_{i,2})$ terminating in the output of $P$, and this sequence of queries corresponds to an observation of a computation of an arithmetic circuit. From several such transcripts of queries, an $n$-of-$m$-special-soundness extractor may determine the discrete logarithm of $P$ with respect to $G$, say that $P = b \cdot G$. Then, it may check if $a = b$ instead. 
+    \end{itemize}
+    We suspect that the difference between these methods may explain some of the gap between what seems to be trivial soundness and nontrivial $n$-of-$m$-special-soundness. 
 
-Finally, we can then replace the factored term by the expression solved for in Item \ref{item:dzxj} to find that
-$$L(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))) =  \sum_{j = 0}^2 \frac{a'(x_j) - \left( \frac{3x_j^2 + A}{2 \cdot y_j}\right) \cdot b(x_j) - y_j \cdot b'(x_j)}{D(x_j,y_j)} \cdot \frac{2 \cdot y_j}{3x_j^2 + A - 2 \lambda \cdot y_j}.$$
+    \item In \cite{BassaSoundnessIPDL}, terminology is rather abused, and the document is not self-contained. This is unsurprising, as it is one of several white papers referencing another white paper by a distinct author. However, new terminology is introduced without explanation, like ``effective divisor'' and ``zero divisor,'' leaving their intention implicit. We suspect, but are not certain of, the following collisions:
+    \begin{itemize}
+    \item Bassa's zero divisors seem to be Eagen's divisors of degree zero. 
+    \item Bassa's effective divisors seem to be Eagen's divisors with non-zero degree. 
+    \end{itemize}
+    However, a divisor is usually defined as \textit{effective} when all coefficients in the sum are positive, whereas the context used requires a \textit{principal divisor}, which is a \textit{difference between effective divisors of equal degree} as in \cite{silverman2009arithmetic}. Bassa's analysis, without a thorough discussion on terminology and notation, is ambiguous.  Clarification would be valuable.
+
+    \item In Sec. 4, a minor modification is proposed, and it is stated that the difference is merely aesthetic. This modification is never elaborated upon, but it may actually complicate the protocol unnecessarily. The current protocol specifically checks that $D(A_i)$ is non-zero, then computes $h_i = \frac{D'(A_i)}{D(A_i)}$, which necessarily involves computing $D(A_i)^{-1}$. It seems more concise to simply compute the inverse using the Extended Euclidean Algorithm, which will then productively fail when $D(A_i)=0$. We suggest that this be investigated a bit further before production development.
+
+    \item Other modifications of the protocol such as the one discussed in the previous point may yield moderately better efficiency. For example, it is not clear whether gains can be made by sampling two challenge points $A_0$, $A_1$ and interpolate a line, or to sample one challenge point $A_0$ and a slope $\lambda$. Such choices impact the choice of verification equations, which may in turn have impacts on overall protocol efficiency.
+
+    % \item \luke{I think that section 3.3 on completeness is complete. The arguments for the completeness error seem fine and addresses the abort conditions. Since the lack of completeness comes from instances where the logarithmic derivative will be undefined and issues with the line chosen, I feel confident that all necessary points are excluded.}
+
+    \item In Sec. 3.3, the first four conditions (i-iv) are sensible, and represented by abort conditions in the protocol in a one-to-one manner. However, condition (v) has the following issues:
+    \begin{itemize}
+    \item This condition does not appear to be explicitly addressed in the abort conditions stated in the protocol.
+    \item This condition is the only one without an analysis that computes the number of excluded cases, so it is not obvious that the number of cases covered here is negligible. 
+    % \item \brando{It is mentioned that Eagen requires the lowest order coefficient to be nonzero and normalizes it to be $1$, whereas the gadget in \cite{KayabaR1CS} requires the coefficient of $x$ to be non-zero and normalizes it to be $1$. I don't understand why we can't check that at least one coefficient is not $0 mod p$? Or just scale the leading coefficient to be $1$? Isn't that sufficient?  And doesn't the Eagen protocol require that the leading coefficient be $1$ anyway??? And if not, we can say a polynomial is \textit{monic} if it's term with highest degree has coefficient $1$. The only constant monic polynomial is $1$, ($0$ is not monic) which is non-zero. Why not demand that D(x,y) be (i) monic and (ii) non-constant? Maybe this zero check is confusing to me...} \free{me fuckin too dog...}
+    \item In the same vein, Sec. 3.2 claims that ``the proportion of not representable divisors will be negligible," but does not prove this.
+    \end{itemize}
+
 \end{enumerate}
 
-This gives us the desired final form of the derivation. We note that in this form it is straightforward to evaluate the logarithmic derivative of the norm at some point, as the summation is taken over only three points.
-
-
-
-
-
-\subsection{A Potential Vulnerability}
-\hspace{\parindent}The first notion that we must approach with care is the multiplicities of the roots of the selected polynomials. 
-As is seen in the above derivation, we have that:
-$$\delta_z(N_{\mathbb{F}_q(E)/\mathbb{F}_q(z)}(D(x,y))) = \sum_{i = 1}^k \frac{n_i}{z-z(P_i)},$$
-where the $n_i$ are the multiplicities of the roots found in $D(x,y)$. 
-The immediate danger is that, as this calculation is performed over a finite field of characteristic $p$, terms could potentially vanish upon modular reduction. 
-For all practical purposes, it can be argued that this issue occurs with only negligible probability, due to the extremely large value of $p$ and the comparatively small degree of the polynomial. As such, selecting a large enough value of $p$ (say, on the order of $2^{252}$ for example) is sufficient to assuage us of this vulnerability. 
-
-\medskip 
-
-A more glaring issue that occurs is that an adversary with knowledge of a single valid proof can forge an arbitrary amount of proofs. Moreover, they may do so in a straightforward fashion.
-We can recall that the motivation behind this derivation is to give a proof of the following:
-$$\sum_{i = 1}^k n_i \cdot P_i = \mathcal{O}_{\infty},$$
-where $\mathcal{O}_{\infty}$ denotes the point at infinity. 
-Since this addition is computed over a field with characteristic $p$, then for any sequence $\{d_i\}_{i = 1}^k$ with $d_i \in \mathbb{Z}$ for all $i$, we have that
-$$\sum_{i = 1}^k (n_i + d_i \cdot p) \cdot P_i \equiv \sum_{i = 1}^k n_i \cdot P_i.$$
-This implies that an adversary can take a valid proof and add on points times integer multiples of $p$, and this will appear to also have the same valid proof.
-
-\medskip 
-
-The obvious, naive fix to this issue would be to add on a check to guarantee that the committed coefficients are in reduced form modulo $p$. 
-This would effectively necessitate a range proof, which can be done efficiently with Bulletproofs \cite{bullet} for instance, but it is actually not enough to prevent forgeries.
-
-\medskip 
-
-Suppose that an adversary obtains a valid proof that $\sum_{i = 1}^k n_i \cdot P_i = \mathcal{O}_{\infty}$, where the $n_i$ coefficients have passed a range proof certifying that $0 \leq n_i < p$ for each $i$. 
-As $\mathcal{O}_{\infty}$ behaves like an identity, $\mathcal{O}_{\infty} = -\mathcal{O}_{\infty}$. 
-This adversary can take $p \cdot P_1 + \dots + p \cdot P_k = 0$, then subtract the valid representation,
-which results in 
-$$\sum_{i = 1}^k (p - n_i) \cdot P_i = -\mathcal{O}_{\infty} = \mathcal{O}_{\infty},$$
-thus also represents a valid proof. 
-The important feature to note here is that if the $n_i$ coefficients pass a range proof certifying that $0 \leq n_i < p$ for all $i$, then for each non-zero $n_i$ we also have that $0 \leq p - n_i < p$, which similarly passes the same range proof. 
-
-\medskip 
-
-This highlights that a naive implementation of the range proof to check that the coefficients $n_i$ are in $[0, p)$ is insufficient. 
-Indeed, a range proof with an upper bound of $\floor{p/2}$ would be more appropriate to prevent this vulnerability. 
-For security purposes, it may be necessary to require the upper bound of the range proof be even smaller to widen the gap between $n_i$ and $p - n_i$, say $\floor{p/10}$, or perhaps simply set an immutable, predetermined upper bound on a protocol basis that nearly all real-world instances fall under, something like $2^{33} \approx 10^{10}$.
-Overall, we do not see an immediate way around range proofs, it appears that they are required to prevent adversarial forgeries. 
 
 
 
 
 
 
+\subsection{Typos}\label{sec:typo}
+
+\begin{enumerate}
+    \item Sec 3.1 has an extra $q$ term in the Hasse bound. Correctly stated, the bound is $|n-(q+1)| \leq 2\sqrt{q}$.
+
+    \item Sec. 2.3 incorrectly states ``the witness is only known to the verifier." As the vector $s$ is the first thing communicated by the prover to the verifier, both parties possess knowledge of the witness.
+
+    \item Lemma 4, Eqn. (5) has a typo: the expression needs $L^{(j)}$.
+
+    \item Sec. 3.1 on page 2 has a typo: $D(x,y) = a(x) - y \cdot b(\underline{x})$.
+
+    \item In Lemma 3, it is never explained what $\mathds{A}$ represents. While not strictly a typo, we believe this was left over after other material got cut.
+
+    \item Sec 3.3 has a typo in condition (v): \textit{non-representability}.
+\end{enumerate}
 
 
 
 
+\section{Issues in More Detail}
+
+\subsection{Objectives}\label{sec:explainbetter}
+
+The relation $\mathcal{R}_{DL}$ being investigated in \cite{BassaSoundnessIPDL} is stated to be a discrete logarithm relation, relating $a \in \mathbb{Z}$ to elliptic curve group point $P$ whenever $P = a  \cdot G$. 
+So, it is natural to surmise that the protocol is intended to be a zero-knowledge proof of knowledge of a witness-statement pair in $\mathcal{R}_{DL}$. 
+\smallskip
+
+This is not so. Indeed, the interactive protocol asks the prover to reveal the binary expansion of $a$ in the first round of interaction, so the protocol is not a zero-knowledge proof of knowledge. In \cite{Eagen22}, Eagen emphasizes the difference between the elliptic curve over which statements are being proven and the elliptic curve over which the proofs are being computed, but readers benefit from greater explanation.
+\smallskip
+    
+In a personal communication with Luke ``Kayaba" Parker, we were informed that this protocol is intended to demonstrate $P = a \cdot G$ without the verifier needing to compute $a \cdot G$ from $a$ and $G$. That is to say, the protocol produces a proof of verifiable computation of $P$, and that that proving satisfaction of the arithmetic circuit for this protocol is to be done in zero-knowledge using the Bulletproofs proving system from \cite{Bullet}. 
+\smallskip
+
+The problem at hand is sufficiently complicated that omitting this context represents a subtle but persistent source of confusion for readers.
+
+\subsection{Benefits}\label{sec:benefits}
+
+The first round of interaction in the protocol reveals the binary expansion of the discrete logarithm and the polynomials defining the ``divisor witness.'' Hence, the protocol is both a trivially complete and trivially sound proving system, as extracting the binary expansion and recomputing $a$ requires no special effort. If any verifier can extract $a$ directly from any accepting transcript and confirm that $P=a \cdot G$ via usual scalar multiplication, what does this protocol improve upon? If this extraction is not sufficient, it is not clear why multiple transcripts with a common initial message and distinct challenges are necessary.
+
+\subsection{Security Definitions}\label{sec:sec_def}
+
+
+The protocol studied in \cite{BassaSoundnessIPDL} is trivially sound and complete, as the witness is revealed in the first round of interaction. Because of this, the protocol cannot be zero-knowledge. Readers would therefore benefit from clarifying which security definitions the protocol proving the relation $\mathcal{R}_{DL}$ is claimed to satisfy. 
+\smallskip
+
+In \cite{BassaSoundnessIPDL}, all the following are mentioned, but none are defined: knowledge soundness, $n$-of-$m$-special-soundness, and witness-extended emulation. 
+That the witness is immediately revealed, and therefore the protocol is trivially knowledge sound and complete, prompts many questions, some of which we outline here: 
+
+\begin{itemize} 
+\item Is the proof of $n$-of-$m$-special-soundness necessary? 
+\item Are the additional transcripts used only to check that the extracted witness satisfies the desired relation? 
+\item If the prior point holds, what is preventing the extractor from merely computing $a \cdot G$ directly? 
+\item Are the conclusions on soundness in \cite{BassaSoundnessIPDL} phrased in terms of witness-extended emulation to account for the fact that the witnesses are revealed? 
+\item If so, does the definition of witness-extended emulation capture the intended phenomena?
+\item It seems that the proof is intended to demonstrate $n$-of-$m$-special-soundness, but then the resulting corollary claims witness-extended emulation, and the relationship between these two definitions is not expanded upon.
+\item How can we reconcile the purported incompleteness from rewinding in \cite{BassaSoundnessIPDL} with the fact that the witness is directly revealed in every honest transcript?
+\end{itemize}
 
 
 
+\subsection{Zero-Knowledge Context}\label{sec:zk_context}
+    
+    Via personal communication with Luke ``Kayaba" Parker, we learned that this protocol will, in practice, be executed inside a Bulletproofs \cite{Bullet} wrapper. This is intended to make the proofs zero-knowledge. This context is not explained in \cite{Eagen22}, \cite{BassaLogDerivSoP}, \cite{BassaSoundnessIPDL}, or \cite{BassaSoundnessProofSoP}, so it is understandable that we missed this context. 
+    % as this protocol is lacking completeness, 
+    
+    
+    However, we fail to see how wrapping the protocol with a Bulletproof solves all the issues presented. 
+    % To the best of our knowledge, completeness is a requirement for a protocol that will end up inside a Bulletproofs wrapper, as otherwise it cannot be called a zero-knowledge proof - even ignoring the issue that the witness is immediately revealed \free{is this actually a problem?}. 
+    \begin{itemize}
+    \item It remains to be justified that this gadget, once wrapped in a Bulletproof, will work as a proof of knowledge in real-world applications, whether zero-knowledge or otherwise.
+    \item To the best of our knowledge, completeness is a requirement for a protocol that will end up inside a Bulletproofs wrapper. The protocol described in \cite{BassaSoundnessIPDL} has a non-zero completeness error, but also reveals its witnesses directly. Reconciling these facts is not trivial, and not explained sufficiently in either \cite{BassaSoundnessIPDL} or \cite{Eagen22}.
+    \end{itemize}
+
+    \subsection{Runtime and Acceptance Probability}\label{sec:runtime}
+
+    Without a formal proof, it is possible that the extractor in \cite{BassaSoundnessIPDL} runs in non-polynomial time or succeeds only with negligible probability.  Runtime and acceptance probability of the extractor constructed to establish soundness should be computed (at least asymptotically, if not more concretely) and it should be checked that the extractor behaves as expected. 
+    \smallskip
+    
+    Indeed, when the general forking algorithm is employed to obtain multiple transcripts for a large $q$, then the runtime of a $13kq$-out-of-$\left(\#E(\mathbb{F}_q)\right)^2$ soundness extractor is $O(q)$ but has success probability which decreases exponentially in $q$. Since $q$ is polynomial in the security parameter $\lambda$,  the extractor runs in linear time, but seems to succeed only negligibly. Without runtime and acceptance probability data, the proof of soundness in \cite{BassaSoundnessIPDL} is not finished, even as simply a sketch.
+
+    \subsection{Asymptotics and Concrete Results}\label{sec:asymptotics}
+    
+    The analysis in \cite{BassaSoundnessIPDL} seems asymptotically correct in the limit as the security parameter $\lambda \to \infty$, for a prime-valued $q$ which is polynomial in $\lambda$. However, relying on the proofs in \cite{BassaSoundnessIPDL} for some fixed $q$ without analyzing the asymptotic error may result in an incorrect impression of the true behavior. 
+    % In other words, if $q$ is a fixed $128$-bit prime, are practical implementations ``close enough'' for the asymptotic approximation to hold? If not, what about $256$-bit primes? $512$?
+    % \medskip 
+    For example, Corollary 6 ends with the claim that $\kappa \sim \frac{13k}{q}$, but this may be tightened as follows:
+    
+    % If we want to put the old stuff back, go for it. -RS
+    
+    % $$\kappa \leq \frac{13kq}{(\#E(\Fq))^2} \leq \frac{13kq}{(\sqrt{q} - 1)^4} = \frac{13k}{q - 4\sqrt{q} - \frac{4}{\sqrt{q}} + \frac{1}{q} + 6} \approx \frac{13k}{q - 4\sqrt{q}}$$
+
+    $$\kappa \leq \frac{13kq}{(\#E(\Fq))^2} \leq \frac{13kq}{(q-2\sqrt{q}+1)^2} \leq \frac{13kq}{(\sqrt{q}-1)^4} = \frac{13k}{q - 4\sqrt{q} - \frac{4}{\sqrt{q}} + \frac{1}{q} + 6} \approx \frac{13k}{q - 4\sqrt{q}}$$
+    
+    While this may appear pedantic, the additive $4\sqrt{q}$ factor is non-negligible, so should be included. As an example, the constant $10^{10^{10}}$ is certainly $O(1)$, and the function $q - 10^{10^{10}}$ is certainly $O(q)$, but neglecting the constant term obscures the true behavior for a concrete choice of $q$.  The same may be said for the completeness error:
+    $$\delta \leq \frac{3kq}{(\#E(\Fq))^2} \leq \frac{3k}{q - 4\sqrt{q} - \frac{4}{\sqrt{q}} + \frac{1}{q} + 6} \approx \frac{3k}{q - 4\sqrt{q}}.$$
+
+    % \item We find that the purpose of the paper \cite{BassaSoudnnessIPDL} is enigmatic. The author puts forward their analysis, sweeping many details under the rug and offering very little in motivation. For instance, the first step of the protocol is that the prover sends the witness $\6s$ to the verifier - if the verifier can use this to recompute $\sum_{i=0}^k s_i B_i$ and confirm that it is indeed equal to $a  \cdot G$ with perfect soundness and completeness, what does this protocol improve upon? 
+
+% \newpage
+% \section{old stuff - comment out later}
+
+
+% \subsection{Issues}
+% The Hasse bound on pg. 4 has a typo
+
+% I don't think the claim ``the challenge space has size $(\#E)^2$" is correct, due to the abort constraints. How many points does this take away? It should be $A_0$ is from $\left\{E - \{P \text{ s.t. } P \neq \O, \ D(P) \neq 0\}\right\}$ and $A_1$ is from $\left\{E - \{A_0\} - \{P \text{ s.t. } P \neq \O, \ D(P) \neq 0\} - \{A_2 = -(A_0 + A_1) \text{ s.t. } A_2 = A_0, A_1, \ A_2 \neq \O, \ D(A_2) \neq 0\} \right\}$
+
+% Sec. 2.3 literally not base-2?? That would need $s_i \in \{0,1\}$. 
+
+% Relation $\R_{DL}$ requires bounded values. Can be massaged to offer proof for same relation using different witnesses, since there doesn't appear to be a check that $s_i \in \{0,p\}$? Same issue before where statements over $\Z$ are transferred to mod $p$.
+
+% Sec. 2.3 is wrong when it says ``The witness
+% is only known to the verifier" lol. The vector $s$ is the first thing communicated.
+
+% % $\stackrel{\$}{\lar}$
+
+% In general, we need to recompute bounds for completeness and soundness. Also, the notation is very bad... Probably makes the most sense to use the two-sided version of the Hasse bound, which states that 
+% $$(\sqrt{q} - 1)^2 \leq n \leq (\sqrt{q} + 1)^2.$$
+
+% Section 3 `degree at most 2'? I think they mean it only needs $i=0,1,2$, but it's unclear what they mean by degree.
+
+% Lemma 4, Eqn. (5) has a typo: needs $L^{(j)}$
+
+% Lemma 2: what is an effective divisor? Check sources?
+
+% How protected is the analysis in Sec. 2.3 from naive attacks? Given $P$ and the $B_i$, can an adversary efficiently determine the $s_i$ such that $P = \sum s_i B_i$? I believe this is the \textit{vector form} of the discrete logarithm problem.
+
+% Sec. 3.1 typo: $D(x,y) = a(x) - y \cdot b(\underline{x})$
+
+% Does reusing a point cause problems? Like round one, verifier sends $A_0,A_1$, then round two sends $B_0 = A_0, B_1$.
+
+% What does Bassa mean in Sec. 2.1 when he says ``where $\sum_{i=0}^k 2^i$ is greater or equal to the order of the cyclic group E"? If that's true, then $\sum_{i=0}^k s_i 2^i$ with $0 \leq s_i < p$ has the potential to be greater than the sum without the $s_i$'s, so it could cycle around mod $p$. Surely this is undesirable? In the same vein, $a \in \Z$ instead of $a \in \Fp$.
 
 
 
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=0.75\linewidth]{EllipticOps.png}
+%     \caption{This is a diagram showing the possible point operations. Note that Bassa excludes cases 2-4.}
+%     % \label{fig:enter-label}
+% \end{figure}
 
 
 
+% \subsection{Kayaba Questions}
+% \begin{itemize}
+%     \item The first thing the prover does in Bassa's protocol is send $\6s$. If the verifier knows this vector, isn't the protocol trivially sound and complete? Since they can always check that $P = a  \cdot G = s_0 B_0 + \dots + s_k B_k$ for themselves, using the public points $\{B_i\}_{i=0}^k$. If ``we can think of the witness as given by the vector $\6s$", but also ``the witness is the discrete logarithm of $P$" which is $a$ such that $[a]G = P$, then doesn't knowledge of $\6s$ reveal the discrete log?
+
+%     \item What's the point of this protocol; what does Bassa claim to do better than the previous guy? If Bassa's protocol has better computational overhead (which I believe is his point), why is there no analysis to convince the reader of this claim?
+    
+%     \item Can't valid proofs of this form be massaged? In that if I know a valid proof for $a  \cdot G = s_0 B_0 + \dots + s_k B_k$, I can form a valid proof for $-a  \cdot G = (p-s_0) B_0 + \dots + (p-s_k) B_k$. Is this even useful, if the vector $\6s$ is known?
+
+%     \item Suppose an integer ($0 \leq a < p$) is written in ``base-2" notation where $$a = \sum_{i=0}^k s_i 2^i.$$
+%     Can't the verifier always guess at the $s_i$'s? Say if $a=4$, then $(1,0,0)$, $(0,2,0)$, and $(0,0,4)$ are all valid representations. Maybe this isn't important if the $s_i$'s are outright given...
+
+%     \item Do we think we can turn this into a zero-knowledge proof of knowledge? Perhaps tack on a Pedersen-style blinding factor...
 
 
+
+% \end{itemize}
 
 
 
